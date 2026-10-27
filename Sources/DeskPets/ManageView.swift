@@ -13,7 +13,6 @@ struct ManageView: View {
             CharactersTab().tabItem { Text(L.t("characters.title")) }
             HooksTab().tabItem { Text(L.t("hooks.title")) }
         }
-        .id(app.config.language)
         .environment(\.locale, Locale(identifier: app.config.language.resolved().rawValue))
         .padding()
         .frame(minWidth: 640, minHeight: 400)
