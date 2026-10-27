@@ -9,7 +9,8 @@ Each pet follows a CLI session and animates when it is working, waiting for inpu
 
 ![Monster companions grouped by state: Zinogre, Mizutsune, Rathalos, and Valstrax working; Velkhana and Tigrex waiting for input; Nargacuga and Nergigante idle](docs/assets/preview.gif)
 
-Actual in-app frames, shown at a 1.2-second loop. Every monster has all three animations.
+Selected companions, shown at a 1.2-second loop. Every monster has all three animations.
+Browse the [full monster roster](docs/monsters.md) for previews and names in English, Traditional Chinese, and Japanese.
 
 - English, Traditional Chinese, and Japanese UI and monster names
 - Adjustable animation speed and size (64–256 px), saved automatically
