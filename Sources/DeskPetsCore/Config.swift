@@ -42,6 +42,13 @@ public struct DirectoryPetPreference: Codable, Equatable, Sendable {
     }
 }
 
+/// 同目錄可重用的位置；ID 沿用寵物配對，工作階段結束後仍保留。
+public struct PetPosition: Codable, Equatable, Identifiable, Sendable {
+    public var id: UUID
+    public var x: Double
+    public var y: Double
+}
+
 public struct AppConfig: Codable, Equatable, Sendable {
     public static let sizes = [64, 96, 128, 192, 256]
     public static let animationDurationRange = 0.4...6.0
@@ -52,15 +59,18 @@ public struct AppConfig: Codable, Equatable, Sendable {
     public var language: AppLanguage
     public var bindings: [PetBinding] = []
     public var directoryPets: [String: DirectoryPetPreference]
+    public var directoryPositions: [String: [PetPosition]]
 
     public init(showPets: Bool = true, petSize: Int = 96, bindings: [PetBinding] = [],
                 animationDuration: Double? = nil, language: AppLanguage = .system,
-                directoryPets: [String: DirectoryPetPreference] = [:]) {
+                directoryPets: [String: DirectoryPetPreference] = [:],
+                directoryPositions: [String: [PetPosition]] = [:]) {
         self.showPets = showPets
         self.petSize = petSize
         self.bindings = bindings
         self.language = language
         self.directoryPets = directoryPets
+        self.directoryPositions = directoryPositions
         self.animationDuration = animationDuration.flatMap { Self.animationDurationRange.contains($0) ? $0 : nil }
     }
 
@@ -70,6 +80,7 @@ public struct AppConfig: Codable, Equatable, Sendable {
         petSize = try container.decodeIfPresent(Int.self, forKey: .petSize) ?? 96
         bindings = try container.decodeIfPresent([PetBinding].self, forKey: .bindings) ?? []
         directoryPets = try container.decodeIfPresent([String: DirectoryPetPreference].self, forKey: .directoryPets) ?? [:]
+        directoryPositions = try container.decodeIfPresent([String: [PetPosition]].self, forKey: .directoryPositions) ?? [:]
         language = (try? container.decode(AppLanguage.self, forKey: .language)) ?? .system
         animationDuration = (try? container.decodeIfPresent(Double.self, forKey: .animationDuration))
             .flatMap { Self.animationDurationRange.contains($0) ? $0 : nil }
@@ -98,6 +109,38 @@ public struct AppConfig: Codable, Equatable, Sendable {
     public mutating func rememberCharacter(from binding: PetBinding) {
         guard !binding.character.isEmpty else { return }
         directoryPets[binding.cwd] = DirectoryPetPreference(character: binding.character, x: binding.x, y: binding.y)
+        rememberPosition(from: binding)
+    }
+
+    public mutating func setPosition(_ id: UUID, x: Double, y: Double) {
+        guard let index = bindings.firstIndex(where: { $0.id == id }) else { return }
+        bindings[index].x = x
+        bindings[index].y = y
+        let binding = bindings[index]
+        rememberPosition(from: binding)
+        if directoryPets[binding.cwd]?.character == binding.character {
+            directoryPets[binding.cwd]?.x = x
+            directoryPets[binding.cwd]?.y = y
+        }
+    }
+
+    private mutating func rememberPosition(from binding: PetBinding) {
+        guard let x = binding.x, let y = binding.y else { return }
+        let position = PetPosition(id: binding.id, x: x, y: y)
+        if let index = directoryPositions[binding.cwd]?.firstIndex(where: { $0.id == binding.id }) {
+            directoryPositions[binding.cwd]?[index] = position
+        } else {
+            directoryPositions[binding.cwd, default: []].append(position)
+        }
+    }
+
+    fileprivate mutating func rememberPositions() {
+        // 先保存舊版在線配對的位置，再清除已結束的工作階段。
+        for binding in bindings { rememberPosition(from: binding) }
+        for (directory, preference) in directoryPets where directoryPositions[directory, default: []].isEmpty {
+            guard let x = preference.x, let y = preference.y else { continue }
+            directoryPositions[directory] = [PetPosition(id: UUID(), x: x, y: y)]
+        }
     }
 
     /// Missing or unreadable config yields defaults; a broken file is never fatal.
@@ -123,9 +166,13 @@ public enum BindingResolver {
         for binding in config.bindings where config.directoryPets[binding.cwd] == nil && available.contains(binding.character) {
             config.rememberCharacter(from: binding)
         }
+        config.rememberPositions()
         let retained = config.bindings.filter { binding in
             (binding.character.isEmpty || available.contains(binding.character)) && sessions.contains(where: binding.matchesExactly)
         }
+        var occupiedPositions = Set(config.bindings.filter { binding in
+            sessions.contains(where: binding.matchesExactly)
+        }.map(\.id))
         var usedCharacters = Set(retained.map(\.character))
         var visitedDirectories = Set<String>()
         var active: [PetBinding] = []
@@ -145,11 +192,15 @@ public enum BindingResolver {
             let remembered = firstInDirectory ? preference?.character : nil
             guard let character = remembered.flatMap({ available.contains($0) ? $0 : nil }) ?? choose(candidates) else { continue }
             let existing = config.bindings.first { $0.matchesExactly(session) }
-            let binding = PetBinding(id: existing?.id ?? UUID(), provider: session.provider, cwd: session.cwd,
+            let position = config.directoryPositions[session.cwd]?.first { $0.id == existing?.id }
+                ?? config.directoryPositions[session.cwd]?.first { !occupiedPositions.contains($0.id) }
+            let legacy = firstInDirectory && config.directoryPositions[session.cwd, default: []].isEmpty ? preference : nil
+            let binding = PetBinding(id: existing?.id ?? position?.id ?? UUID(), provider: session.provider, cwd: session.cwd,
                                      character: character, pid: session.pid, pidStart: session.startTime,
-                                     x: existing?.x ?? (firstInDirectory ? preference?.x : nil),
-                                     y: existing?.y ?? (firstInDirectory ? preference?.y : nil))
+                                     x: existing?.x ?? position?.x ?? legacy?.x,
+                                     y: existing?.y ?? position?.y ?? legacy?.y)
             active.append(binding)
+            occupiedPositions.insert(binding.id)
             result[binding.id] = session.id
             usedCharacters.insert(character)
             if preference.map({ !available.contains($0.character) }) ?? true {

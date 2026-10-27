@@ -43,6 +43,8 @@ Animation duration applies to a complete loop: four frames at 1.2 seconds means 
 Settings apply immediately. Turn off the duration override to use each GIF's original timing.
 Size is the base display size; per-character scale adjustments keep monsters visually balanced.
 Ended sessions disappear automatically; directory preferences remain for the next launch.
+Each directory remembers every pet's position. New sessions reuse vacant positions without moving active pets;
+pets outside the available screens move back to the nearest visible area.
 Selecting **None** hides a pet for that session without forgetting the directory's character choice.
 
 Double-click a pet or choose **Show Terminal** to focus its session. For native Ghostty tabs, Ghostty 1.3+

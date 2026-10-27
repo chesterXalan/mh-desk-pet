@@ -153,6 +153,7 @@ final class AppController: ObservableObject {
         pet.onMoved = { [weak self] id, point in self?.petMoved(id, to: point) }
         pet.menuProvider = { [weak self] id in self?.contextMenu(for: id) ?? NSMenu() }
         pets[binding.id] = pet
+        petMoved(binding.id, to: pet.frame.origin)
         Log.write("pet shown for \(binding.provider.rawValue) \(binding.cwd) as \(binding.character)")
         return pet
     }
@@ -219,12 +220,7 @@ final class AppController: ObservableObject {
     }
 
     private func petMoved(_ id: UUID, to origin: CGPoint) {
-        guard let index = config.bindings.firstIndex(where: { $0.id == id }) else { return }
-        config.bindings[index].x = origin.x
-        config.bindings[index].y = origin.y
-        if config.directoryPets[config.bindings[index].cwd]?.character == config.bindings[index].character {
-            config.rememberCharacter(from: config.bindings[index])
-        }
+        config.setPosition(id, x: origin.x, y: origin.y)
         saveSoon()
     }
 
