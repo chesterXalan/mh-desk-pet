@@ -44,7 +44,7 @@
 "character.waiting" = "入力待ち（任意）";
 "character.new" = "新しいキャラクター";
 "character.name" = "名前";
-"character.emID" = "EM 番号";
+"character.emID" = "番号";
 "action.clear" = "クリア";
 "action.choose" = "選択…";
 "character.drop" = "GIF を 1〜3 個ドロップし、各動作への割り当てを確認";

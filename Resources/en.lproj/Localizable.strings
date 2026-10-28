@@ -44,7 +44,7 @@
 "character.waiting" = "Waiting (optional)";
 "character.new" = "New Character";
 "character.name" = "Name";
-"character.emID" = "EM ID";
+"character.emID" = "ID";
 "action.clear" = "Clear";
 "action.choose" = "Choose…";
 "character.drop" = "Drop 1–3 GIFs here, then check their animation slots";

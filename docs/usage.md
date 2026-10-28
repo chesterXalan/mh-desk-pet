@@ -22,7 +22,7 @@ Animation duration applies to a complete loop: four frames at 1.2 seconds means 
 Settings apply immediately. Turn off the duration override to use each GIF's original timing.
 Size is the base display size; per-character scale adjustments keep monsters visually balanced.
 
-The **Characters** table shows each monster's EM ID. Click **EM ID** or **Name** to sort;
+The **Characters** table shows each monster's EM ID. Click **ID** or **Name** to sort;
 click the same heading again to reverse the order. Characters without an EM ID appear last when sorting by ID.
 
 ## Habitat
