@@ -350,8 +350,6 @@ private struct HooksTab: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(L.t("hooks.help"))
-                .fixedSize(horizontal: false, vertical: true)
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                 GridRow {
                     Text("Claude Code").bold()
@@ -364,9 +362,6 @@ private struct HooksTab: View {
                     Text(status(.codex))
                 }
             }
-            Text(L.t("hooks.backupHelp"))
-                .font(.caption).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
             HStack {
                 Button(L.t("hooks.install")) { run { try app.installHooks() } }
                 Button(L.t("hooks.remove")) { run { try app.uninstallHooks() } }
@@ -374,6 +369,13 @@ private struct HooksTab: View {
             if !ui.message.isEmpty {
                 Text(ui.message).font(.caption.monospaced()).textSelection(.enabled)
             }
+            Divider()
+            Text(L.t("hooks.help"))
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(L.t("hooks.backupHelp"))
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
