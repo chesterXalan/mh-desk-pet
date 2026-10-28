@@ -5,7 +5,7 @@ import ServiceManagement
 import SwiftUI
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let controller = AppController()
     private var statusItem: NSStatusItem!
     private var showItem: NSMenuItem!
@@ -54,26 +54,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         controller.repositionPets()
     }
 
-    func applicationDidBecomeActive(_ notification: Notification) {
-        if manageWindow?.isKeyWindow == true { raiseManagerLevel() }
-    }
-
-    func applicationDidResignActive(_ notification: Notification) {
-        manageWindow?.level = .normal
-    }
-
-    func windowDidBecomeKey(_ notification: Notification) {
-        raiseManagerLevel()
-    }
-
-    func windowDidResignKey(_ notification: Notification) {
-        manageWindow?.level = .normal
-    }
-
-    private func raiseManagerLevel() {
-        manageWindow?.level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
-    }
-
     func menuNeedsUpdate(_ menu: NSMenu) {
         showItem.state = controller.config.showPets ? .on : .off
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
@@ -116,18 +96,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             window.title = L.t("app.title")
             window.setContentSize(NSSize(width: 720, height: 460))
             window.isReleasedWhenClosed = false
+            window.level = .normal
             window.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
-            window.delegate = self
             window.center()
             manageWindow = window
         }
-        // 等選單收起後再取回焦點，並確保設定不被浮動桌寵蓋住。
+        // 等選單收起後再取回焦點，只在使用者開啟設定時帶到前景。
         DispatchQueue.main.async { [weak self] in
             guard let self, let window = self.manageWindow else { return }
             if window.isMiniaturized { window.deminiaturize(nil) }
             window.setFrameOrigin(PetPlacement.visibleOrigin(for: window.frame, screens: NSScreen.screens.map(\.visibleFrame)))
             NSApp.activate()
-            self.raiseManagerLevel()
             window.makeKeyAndOrderFront(nil)
             window.orderFrontRegardless()
         }

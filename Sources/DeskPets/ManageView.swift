@@ -83,6 +83,7 @@ private struct HomeTab: View {
                     get: { app.config.home.automaticallyAssign }, set: { app.setHomeAutoAssign($0) }))
                 Toggle(L.t("home.smartResize"), isOn: Binding(
                     get: { app.config.home.smartResize }, set: { app.setHomeSmartResize($0) }))
+                    .help(L.t("home.smartHelp"))
                 HStack(spacing: 12) {
                     Picker(L.t("home.columns"), selection: Binding(
                         get: { app.config.home.effectiveColumns }, set: { app.setHomeColumns($0) })) {
@@ -110,13 +111,6 @@ private struct HomeTab: View {
             .disabled(!app.config.home.enabled)
             Divider()
             Text(L.t("home.help"))
-                .fixedSize(horizontal: false, vertical: true)
-            if app.config.home.smartResize {
-                Text(L.t("home.smartHelp"))
-                    .font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Text(L.t("home.screenHelp"))
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
