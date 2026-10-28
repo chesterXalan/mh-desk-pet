@@ -364,13 +364,13 @@ final class AppController: ObservableObject {
     }
 
     func setHomeColumns(_ columns: Int) {
-        config.home.setBaseSize(columns: columns, rows: config.home.rows)
+        config.home.setSize(columns: columns, rows: config.home.effectiveRows)
         updatePets()
         save()
     }
 
     func setHomeRows(_ rows: Int) {
-        config.home.setBaseSize(columns: config.home.columns, rows: rows)
+        config.home.setSize(columns: config.home.effectiveColumns, rows: rows)
         updatePets()
         save()
     }

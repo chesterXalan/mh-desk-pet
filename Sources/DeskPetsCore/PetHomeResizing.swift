@@ -7,7 +7,7 @@ public enum PetHomeEdge: String, CaseIterable, Codable, Sendable {
     var isColumn: Bool { self == .left || self == .right }
 }
 
-/// 分別記住四側加蓋的格數，縮回時不會吃掉使用者設定的基本範圍。
+/// 相容舊版分開保存的加蓋格數；下次擴縮時會併入目前格數。
 public struct PetHomeExpansion: Codable, Equatable, Sendable {
     public var left = 0
     public var right = 0
@@ -46,7 +46,7 @@ extension PetHome {
         smartResize = enabled
     }
 
-    public mutating func setBaseSize(columns: Int, rows: Int) {
+    public mutating func setSize(columns: Int, rows: Int) {
         self.columns = min(max(columns, 1), 8)
         self.rows = min(max(rows, 1), 8)
         expansion = PetHomeExpansion()
@@ -71,7 +71,7 @@ extension PetHome {
         }
         let residents = Set(active)
         while let edge = PetHomeEdge.allCases.first(where: { edge in
-            expansion[edge] > 0 && layout.indices(on: edge).allSatisfy { index in
+            (edge.isColumn ? layout.columns : layout.rows) > 1 && layout.indices(on: edge).allSatisfy { index in
                 slots[index].map { !residents.contains($0) } ?? true
             }
         }) {
@@ -106,7 +106,9 @@ extension PetHome {
             }
         }
         slots = rooms
-        expansion[edge] += delta
+        columns = resized.columns
+        rows = resized.rows
+        expansion = PetHomeExpansion()
         x = resized.frame.minX
         y = resized.frame.minY
         return resized
@@ -162,13 +164,18 @@ extension PetHomeLayout {
     public func expansionEdge(at point: CGPoint, home: PetHome, screens: [CGRect],
                               moving id: UUID, active: Set<UUID>) -> PetHomeEdge? {
         guard slot(at: point) == nil else { return nil }
+        let source = home.slot(for: id, capacity: capacity)
         return PetHomeEdge.allCases.first { edge in
-            canExpand(edge, home: home, screens: screens)
-                && (home.expansion[edge] == 0 || indices(on: edge).contains { index in
+            guard canExpand(edge, home: home, screens: screens) else { return false }
+            let edgeRooms = indices(on: edge)
+            if let source, edgeRooms.contains(source) {
+                let othersRemain = edgeRooms.contains { index in
                     guard home.slots.indices.contains(index), let resident = home.slots[index] else { return false }
                     return resident != id && active.contains(resident)
-                })
-                && expansionCells(toward: edge).contains { $0.contains(point) }
+                }
+                guard othersRemain else { return false }
+            }
+            return expansionCells(toward: edge).contains { $0.contains(point) }
         }
     }
 

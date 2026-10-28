@@ -84,27 +84,20 @@ private struct HomeTab: View {
                 Toggle(L.t("home.smartResize"), isOn: Binding(
                     get: { app.config.home.smartResize }, set: { app.setHomeSmartResize($0) }))
                 HStack(spacing: 12) {
-                    if app.config.home.smartResize { Text(L.t("home.baseSize")).foregroundStyle(.secondary) }
                     Picker(L.t("home.columns"), selection: Binding(
-                        get: { app.config.home.columns }, set: { app.setHomeColumns($0) })) {
+                        get: { app.config.home.effectiveColumns }, set: { app.setHomeColumns($0) })) {
                         ForEach(1...8, id: \.self) { Text(String($0)).tag($0) }
                     }
                     Text("×").foregroundStyle(.secondary)
                     Picker(L.t("home.rows"), selection: Binding(
-                        get: { app.config.home.rows }, set: { app.setHomeRows($0) })) {
+                        get: { app.config.home.effectiveRows }, set: { app.setHomeRows($0) })) {
                         ForEach(1...8, id: \.self) { Text(String($0)).tag($0) }
                     }
-                    Text(L.format("home.capacity", app.config.home.columns * app.config.home.rows))
+                    Text(L.format("home.capacity", app.config.home.effectiveColumns * app.config.home.effectiveRows))
                         .foregroundStyle(.secondary)
                 }
                 .fixedSize()
-                HStack(spacing: 16) {
-                    Button(L.t("home.moveAll")) { app.moveAllPetsHome() }
-                    if app.config.home.smartResize {
-                        Text(L.format("home.currentSize", app.config.home.effectiveColumns, app.config.home.effectiveRows))
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
+                Button(L.t("home.moveAll")) { app.moveAllPetsHome() }
             }
             .disabled(!app.config.home.enabled)
             Divider()

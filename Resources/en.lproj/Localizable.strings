@@ -6,9 +6,7 @@
 "home.showGrid" = "Show translucent rooms";
 "home.autoAssign" = "Automatically move new pets into vacant rooms";
 "home.smartResize" = "Smart resizing";
-"home.baseSize" = "Base size";
-"home.currentSize" = "Current: %d × %d";
-"home.smartHelp" = "Full rooms expand toward available screen space, up to 8 × 8. Drop on a dashed edge room to expand; drag farther to move out. Moving the last pet of an added edge farther out also moves it out instead of adding empty rows. Empty added edges shrink back toward the base size. Turning smart resizing off keeps the current dimensions.";
+"home.smartHelp" = "Full rooms expand toward available screen space, up to 8 × 8. Drop on a dashed edge room to expand; drag farther to move out. Moving the last resident of an outer edge farther out moves it out. All empty outer rows and columns are reclaimed; interior gaps remain. An empty habitat keeps one room. Turn smart resizing off to keep fixed dimensions.";
 "home.columns" = "Columns";
 "home.rows" = "Rows";
 "home.capacity" = "%d rooms";

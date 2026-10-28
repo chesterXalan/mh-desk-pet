@@ -36,7 +36,7 @@ import Testing
         home = try JSONDecoder().decode(PetHome.self, from: JSONEncoder().encode(home))
         let restored = home.arrange(active: ids + [newcomer], petSize: petSize, screens: [screen])
         #expect(restored == expanded)
-        #expect(home.expansion[edge] == 1 && home.smartResize)
+        #expect(home.effectiveColumns == expanded.columns && home.effectiveRows == expanded.rows && home.smartResize)
         home.leave(newcomer)
         let shrunk = home.arrange(active: ids + [newcomer], petSize: petSize, screens: [screen])
         #expect(shrunk == before)
@@ -56,7 +56,7 @@ import Testing
         #expect(before.preferredExpansion(home: home, screens: [availableScreen]) == edge)
         let after = home.arrange(active: [first, second], petSize: petSize, screens: [availableScreen])
         #expect(after.capacity == 2)
-        #expect(home.expansion[edge] == 1)
+        #expect(after.frame == availableScreen)
         #expect(home.slot(for: second, capacity: 2) != nil)
         #expect(after.cell(try #require(home.slot(for: first, capacity: 2))) == before.cell(0))
         #expect(availableScreen.contains(after.frame))
@@ -70,7 +70,7 @@ import Testing
         #expect(before.preferredExpansion(home: home, screens: [screen]) == .top)
         let after = home.arrange(active: ids, petSize: petSize, screens: [screen])
         #expect(after.columns == 4 && after.rows == 3)
-        #expect(home.expansion.top == 1)
+        #expect(after.frame == before.expandedFrame(toward: .top))
         for (index, id) in ids.prefix(8).enumerated() {
             #expect(after.cell(try #require(home.slot(for: id, capacity: after.capacity))) == before.cell(index))
         }
@@ -98,10 +98,10 @@ import Testing
         home.place(newcomer, in: twice.columns - 1, active: [resident, newcomer], capacity: twice.capacity)
         let occupied = home.arrange(active: [resident, newcomer], petSize: petSize, screens: [screen])
         #expect(occupied == twice)
-        #expect(home.slots[2] == nil)
+        #expect(home.slots[1] == nil)
         let ended = home.arrange(active: [resident], petSize: petSize, screens: [screen])
         #expect(ended == base)
-        #expect(home.columns == 2 && home.rows == 2)
+        #expect(home.effectiveColumns == 1 && home.effectiveRows == 1)
         #expect(home.slots.filter { $0 != nil }.count == 1)
     }
 
@@ -176,7 +176,7 @@ import Testing
         let ids = (0..<10).map { _ in UUID() }
         home.outside = Set(ids)
         let base = home.arrange(active: ids, petSize: petSize, screens: [screen])
-        #expect(base.capacity == 4 && home.slots.allSatisfy { $0 == nil })
+        #expect(base.capacity == 1 && home.slots.allSatisfy { $0 == nil })
         let filled = home.arrange(active: ids, petSize: petSize, screens: [screen], moveAll: true)
         #expect(filled.capacity >= ids.count)
         #expect(Set(home.slots.compactMap { $0 }) == Set(ids))
@@ -201,7 +201,7 @@ import Testing
         home.setSmartResize(true)
         let topResult = home.expand(toward: .top, layout: taller, screens: [screen])
         _ = try #require(topResult)
-        home.setBaseSize(columns: 4, rows: 2)
+        home.setSize(columns: 4, rows: 2)
         #expect(home.expansion == PetHomeExpansion())
         #expect(home.effectiveColumns == 4 && home.effectiveRows == 2 && home.smartResize)
     }
@@ -237,6 +237,86 @@ import Testing
         home = try JSONDecoder().decode(PetHome.self, from: JSONEncoder().encode(home))
         #expect(home.arrange(active: remaining, petSize: petSize, screens: [smallerScreen]) == shrunk)
         #expect(home == saved)
+    }
+
+    @Test func originalFourByTwoShrinksAroundPetsOnTheRightWithoutMovingThem() throws {
+        var home = smartHome()
+        home.columns = 4
+        let ids = (0..<4).map { _ in UUID() }
+        let rooms = [2, 3, 6, 7]
+        home.slots = Array(repeating: nil, count: 8)
+        for (id, room) in zip(ids, rooms) { home.slots[room] = id }
+        let before = PetHomeLayout(home: home, petSize: petSize, screens: [screen])
+        let duringDrag = home.arrange(active: ids, petSize: petSize, screens: [screen], allowResizing: false)
+        #expect(duringDrag == before)
+        let after = home.arrange(active: ids, petSize: petSize, screens: [screen])
+        #expect(after.columns == 2 && after.rows == 2)
+        #expect(home.slots.compactMap { $0 } == ids)
+        for (index, room) in rooms.enumerated() { #expect(after.cell(index) == before.cell(room)) }
+        #expect(after.frame.maxX == before.frame.maxX && after.frame.minY == before.frame.minY)
+        home = try JSONDecoder().decode(PetHome.self, from: JSONEncoder().encode(home))
+        #expect(home.arrange(active: ids, petSize: petSize, screens: [screen]) == after)
+    }
+
+    @Test(arguments: PetHomeEdge.allCases)
+    func allOriginalEmptyEdgesShrinkWithoutReorderingResidents(edge: PetHomeEdge) throws {
+        var home = smartHome()
+        home.columns = 4
+        home.rows = 4
+        let rooms: [Int]
+        switch edge {
+        case .left: rooms = [2, 3, 14, 15]
+        case .right: rooms = [0, 1, 12, 13]
+        case .top: rooms = [8, 11, 12, 15]
+        case .bottom: rooms = [0, 3, 4, 7]
+        }
+        let ids = rooms.map { _ in UUID() }
+        home.slots = Array(repeating: nil, count: 16)
+        for (id, room) in zip(ids, rooms) { home.slots[room] = id }
+        let before = PetHomeLayout(home: home, petSize: petSize, screens: [screen])
+        let after = home.arrange(active: ids, petSize: petSize, screens: [screen])
+        #expect(after.capacity == 8)
+        #expect(edge.isColumn ? after.columns == 2 : after.rows == 2)
+        for (id, room) in zip(ids, rooms) {
+            let newRoom = try #require(home.slot(for: id, capacity: after.capacity))
+            #expect(after.cell(newRoom) == before.cell(room))
+        }
+    }
+
+    @Test func legacyExpansionMergesIntoActualSizeAndEmptyHomeKeepsOneDropTarget() throws {
+        var home = smartHome()
+        home.columns = 4
+        home.expansion.left = 1
+        home.expansion.right = 2
+        home.expansion.top = 1
+        home.expansion.bottom = 1
+        let ids = (0..<4).map { _ in UUID() }
+        let rooms = [12, 13, 19, 20]
+        home.slots = Array(repeating: nil, count: 28)
+        for (id, room) in zip(ids, rooms) { home.slots[room] = id }
+        home = try JSONDecoder().decode(PetHome.self, from: JSONEncoder().encode(home))
+        let before = PetHomeLayout(home: home, petSize: petSize, screens: [screen])
+        #expect(before.columns == 7 && before.rows == 4)
+        let after = home.arrange(active: ids, petSize: petSize, screens: [screen])
+        #expect(after.columns == 2 && after.rows == 2)
+        #expect(home.expansion == PetHomeExpansion())
+        for (index, room) in rooms.enumerated() { #expect(after.cell(index) == before.cell(room)) }
+        let empty = home.arrange(active: [], petSize: petSize, screens: [screen])
+        #expect(empty.columns == 1 && empty.rows == 1 && home.slots.count == 1)
+        let newcomer = UUID()
+        let returning = home.arrange(active: [newcomer], petSize: petSize, screens: [screen])
+        #expect(returning == empty && home.slots == [newcomer])
+    }
+
+    @Test func turningSmartModeOffKeepsOriginalEmptyRooms() {
+        var home = smartHome()
+        home.columns = 4
+        home.setSmartResize(false)
+        let ids = (0..<4).map { _ in UUID() }
+        home.slots = [nil, nil, ids[0], ids[1], nil, nil, ids[2], ids[3]]
+        let before = PetHomeLayout(home: home, petSize: petSize, screens: [screen])
+        #expect(home.arrange(active: ids, petSize: petSize, screens: [screen]) == before)
+        #expect(home.effectiveColumns == 4 && home.effectiveRows == 2)
     }
 
     private func smartHome() -> PetHome {

@@ -56,14 +56,15 @@ to swap positions, or outside to move out. A pet moved out stays outside until y
 Room backgrounds can be hidden; the handle stays visible, and rooms reappear while dragging a pet.
 Room assignments and the habitat position survive restarts. Turning the habitat off restores free-placement
 positions. Choose a **columns × rows** layout (for example, 4 × 2 gives eight rooms).
-Optional **Smart resizing** treats that as the minimum size: full rooms expand toward available screen
-space, favoring a compact layout while keeping existing rooms in place. Drag a pet onto a dashed room
-outside an edge and release to add a row or column; passing through the preview does not expand it.
-Drag farther away to move out. Moving the last resident of an added edge farther out also moves it out,
-rather than leaving empty rows or columns behind. Empty added outer rows and columns shrink automatically; interior gaps
-and the base area remain. Turning smart resizing off freezes the current dimensions, and manually changing
-the base size resets the expansion. Expansion stops at 8 × 8 or when no side fits the screen; overflow pets
-stay outside. The habitat scales down on smaller screens, and an unplugged display returns the whole group
+With **Smart resizing**, full rooms expand toward available screen space, favoring a compact layout while
+keeping existing rooms in place. Drag a pet onto a dashed room outside an edge and release to add a row or
+column; passing through the preview does not expand it. Drag farther away to move out. Moving the last
+resident of an outer edge farther out also moves it out, rather than leaving empty rows or columns behind.
+All empty outer rows and columns shrink automatically, including the original grid; interior gaps remain.
+For example, four pets in the right-hand 2 × 2 corner of a 4 × 2 grid keep their positions while the two empty
+left columns disappear. An empty habitat keeps one room as a drop target. The size controls show the actual
+dimensions; turn smart resizing off to keep a fixed grid. Expansion stops at 8 × 8 or when no side fits the
+screen; overflow pets stay outside. The habitat scales down on smaller screens, and an unplugged display returns the whole group
 to a visible screen.
 
 Double-click a pet or choose **Show Terminal** to focus its session. For native Ghostty tabs, Ghostty 1.3+
