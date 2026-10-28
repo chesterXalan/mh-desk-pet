@@ -25,8 +25,8 @@ The roster and in-app character lists follow numeric EM ID order.
 Requires an Apple Silicon Mac, macOS 14+, Swift 6 (Command Line Tools), and FFmpeg.
 
 ```sh
-git clone https://github.com/chesterXalan/mh-desk-pet.git
-cd mh-desk-pet
+git clone https://github.com/chesterXalan/mh-desk-pets.git
+cd mh-desk-pets
 brew install ffmpeg
 make app
 ```
