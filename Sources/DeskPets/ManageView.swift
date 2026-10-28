@@ -245,10 +245,7 @@ private struct CharactersTab: View {
                         }
                     }
                 }
-                .width(min: 180, ideal: 240, max: 280)
             }
-            .frame(maxWidth: 480)
-            .frame(maxWidth: .infinity)
             HStack {
                 Button(L.t("character.add")) { ui.adding = true }
                 Spacer()
