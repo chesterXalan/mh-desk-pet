@@ -7,6 +7,9 @@ For installation and quick setup, see the [README](../README.md#use).
 Sessions get pets automatically. Each directory remembers your last character choice; additional sessions
 get random characters, avoiding duplicates when possible. Change a pet in **Sessions** or its context menu.
 
+The session list starts in launch order. Click **Session**, **CLI**, or **State** to sort; click again to reverse.
+State order is waiting for input, working, idle, then unknown. Status updates only reorder the list when sorting by state.
+
 Ended sessions disappear automatically; directory preferences remain for the next launch.
 Each directory remembers every pet's position. New sessions reuse vacant positions without moving active pets;
 pets outside the available screens move back to the nearest visible area.

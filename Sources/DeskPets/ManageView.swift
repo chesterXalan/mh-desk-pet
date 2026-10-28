@@ -123,27 +123,32 @@ private struct HomeTab: View {
 
 private struct SessionsTab: View {
     @EnvironmentObject private var app: AppController
+    @StateObject private var ui = SessionsUI()
+
+    private var rows: [SessionTableRow] {
+        app.sessions.map { SessionTableRow(session: $0) }.sorted(using: ui.sortOrder.prefix(1))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Table(app.sessions) {
-                TableColumn(L.t("session.label")) { session in
+            Table(rows, sortOrder: $ui.sortOrder) {
+                TableColumn(L.t("session.label"), value: \.name) { row in
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(verbatim: session.displayName)
-                        if session.title != nil {
-                            Text(verbatim: session.location).font(.caption).foregroundStyle(.secondary)
+                        Text(verbatim: row.name)
+                        if row.session.title != nil {
+                            Text(verbatim: row.session.location).font(.caption).foregroundStyle(.secondary)
                         }
                     }
-                    .help(session.cwd)
+                    .help(row.session.cwd)
                 }
-                TableColumn("CLI") { session in Text(session.provider.rawValue) }
+                TableColumn("CLI", value: \.cli) { row in Text(row.cli) }
                     .width(60)
-                TableColumn(L.t("state.label")) { session in StateLabel(state: session.state) }
+                TableColumn(L.t("state.label"), value: \.statePriority) { row in StateLabel(state: row.session.state) }
                     .width(110)
-                TableColumn(L.t("pet.label")) { session in
+                TableColumn(L.t("pet.label")) { row in
                     Picker("", selection: Binding(
-                        get: { app.binding(for: session)?.character ?? "" },
-                        set: { app.setPet($0.isEmpty ? nil : $0, for: session) })) {
+                        get: { app.binding(for: row.session)?.character ?? "" },
+                        set: { app.setPet($0.isEmpty ? nil : $0, for: row.session) })) {
                         Text(L.t("binding.none")).tag("")
                         ForEach(app.characters) { Text($0.displayName(in: L.language)).tag($0.name) }
                     }
@@ -415,6 +420,23 @@ private struct HooksTab: View {
     }
 }
 
+private struct SessionTableRow: Identifiable {
+    let session: AgentSession
+
+    var id: String { session.id }
+    var name: String { session.displayName }
+    var cli: String { session.provider.rawValue }
+    var statePriority: Int {
+        switch session.state {
+        case .waiting: return 0
+        case .working: return 1
+        case .idle: return 2
+        case .unknown: return 3
+        case .exited: return 4
+        }
+    }
+}
+
 private struct CharacterTableRow: Identifiable {
     let character: CharacterInfo
     let name: String
@@ -424,6 +446,10 @@ private struct CharacterTableRow: Identifiable {
 }
 
 // SwiftUI's @State is a macro the Command Line Tools cannot expand, so view state lives in small objects.
+private final class SessionsUI: ObservableObject {
+    @Published var sortOrder: [KeyPathComparator<SessionTableRow>] = []
+}
+
 private final class CharactersUI: ObservableObject {
     @Published var sortOrder = [KeyPathComparator(\CharacterTableRow.emID)]
     @Published var adding = false
