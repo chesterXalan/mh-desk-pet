@@ -68,6 +68,8 @@ final class PetPanel: NSPanel {
 final class PetWindowController: NSObject, NSWindowDelegate {
     let bindingId: UUID
     var onMoved: ((UUID, CGPoint) -> Void)?
+    var onDragBegan: ((UUID, CGPoint) -> Void)?
+    var onDragEnded: ((UUID, CGPoint) -> Void)?
     var menuProvider: ((UUID) -> NSMenu)?
 
     private let panel: PetPanel
@@ -95,6 +97,21 @@ final class PetWindowController: NSObject, NSWindowDelegate {
         panel.delegate = self
         petView.onDoubleClick = { [weak self] in self?.activateTerminal() }
         petView.onHover = { [weak self] inside in self?.hover(inside) }
+        petView.onDragBegan = { [weak self] origin in
+            guard let self else { return }
+            self.onDragBegan?(self.bindingId, origin)
+        }
+        petView.onDragEnded = { [weak self] point in
+            guard let self else { return }
+            self.onDragEnded?(self.bindingId, point)
+        }
+        petView.onDragged = { [weak self] point in
+            guard let self else { return }
+            self.onMoved?(self.bindingId, point)
+        }
+        petView.setAccessibilityElement(true)
+        petView.setAccessibilityRole(.image)
+        petView.setAccessibilityIdentifier("pet-\(bindingId.uuidString)")
         petView.menuProvider = { [weak self] in
             guard let self else { return nil }
             return self.menuProvider?(self.bindingId)
@@ -103,12 +120,14 @@ final class PetWindowController: NSObject, NSWindowDelegate {
 
     var frame: NSRect { panel.frame }
 
-    func update(session: AgentSession, character: CharacterInfo, size: CGFloat, animationDuration: Double?) {
+    func update(session: AgentSession, character: CharacterInfo, size: CGFloat, animationDuration: Double?,
+                constrainToScreen: Bool = true) {
         self.session = session
         if panel.frame.width != size {
             panel.setFrame(NSRect(origin: panel.frame.origin, size: NSSize(width: size, height: size)), display: true)
         }
-        keepOnScreen()
+        if constrainToScreen { keepOnScreen() }
+        petView.setAccessibilityLabel(character.displayName(in: L.language))
         petView.setState(session.state)
         let next = GIFAnimation.load(character.gif(for: session.state))
         if next !== animation || self.animationDuration != animationDuration {
@@ -124,8 +143,14 @@ final class PetWindowController: NSObject, NSWindowDelegate {
     func keepOnScreen() {
         let origin = PetPlacement.visibleOrigin(for: panel.frame, screens: NSScreen.screens.map(\.visibleFrame))
         guard origin != panel.frame.origin else { return }
-        panel.setFrameOrigin(origin)
+        setOrigin(origin)
         onMoved?(bindingId, origin)
+    }
+
+    func setOrigin(_ origin: CGPoint) {
+        guard panel.frame.origin != origin else { return }
+        panel.setFrameOrigin(origin)
+        bubble.hide()
     }
 
     func show() {
@@ -178,7 +203,6 @@ final class PetWindowController: NSObject, NSWindowDelegate {
 
     func windowDidMove(_ notification: Notification) {
         bubble.hide()
-        onMoved?(bindingId, panel.frame.origin)
     }
 
     func windowDidChangeOcclusionState(_ notification: Notification) {
@@ -195,7 +219,12 @@ final class PetView: NSView {
     private let dot = CALayer()
     var onDoubleClick: (() -> Void)?
     var onHover: ((Bool) -> Void)?
+    var onDragBegan: ((CGPoint) -> Void)?
+    var onDragEnded: ((CGPoint) -> Void)?
+    var onDragged: ((CGPoint) -> Void)?
     var menuProvider: (() -> NSMenu?)?
+    private var dragStart: (mouse: CGPoint, origin: CGPoint)?
+    private var dragging = false
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -240,18 +269,40 @@ final class PetView: NSView {
     }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override var mouseDownCanMoveWindow: Bool { false }
 
     override func mouseEntered(with event: NSEvent) { onHover?(true) }
 
     override func mouseExited(with event: NSEvent) { onHover?(false) }
 
     override func mouseDown(with event: NSEvent) {
+        dragStart = nil
+        dragging = false
         if event.clickCount == 2 {
             onDoubleClick?()
-        } else {
+        } else if let window {
             onHover?(false)
-            window?.performDrag(with: event)
+            dragStart = (NSEvent.mouseLocation, window.frame.origin)
         }
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let start = dragStart else { return }
+        let mouse = NSEvent.mouseLocation
+        let delta = CGPoint(x: mouse.x - start.mouse.x, y: mouse.y - start.mouse.y)
+        guard dragging || hypot(delta.x, delta.y) >= 3 else { return }
+        if !dragging {
+            dragging = true
+            onDragBegan?(start.origin)
+        }
+        window?.setFrameOrigin(CGPoint(x: start.origin.x + delta.x, y: start.origin.y + delta.y))
+        if let window { onDragged?(window.frame.origin) }
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        if dragging { onDragEnded?(NSEvent.mouseLocation) }
+        dragStart = nil
+        dragging = false
     }
 
     override func rightMouseDown(with event: NSEvent) {

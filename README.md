@@ -15,6 +15,7 @@ Browse the [full monster roster](docs/monsters.md) for previews and names in Eng
 - English, Traditional Chinese, and Japanese UI and monster names
 - Adjustable animation speed and size (64–256 px), saved automatically
 - Drag pets anywhere; double-click to focus their terminal, including tmux panes and cmux tabs
+- Optional translucent habitat with automatic rooms, drag-to-swap, and a handle to move pets together
 - Import custom GIF characters or add monsters from PNG frames
 
 ## Build and install
@@ -47,6 +48,16 @@ Ended sessions disappear automatically; directory preferences remain for the nex
 Each directory remembers every pet's position. New sessions reuse vacant positions without moving active pets;
 pets outside the available screens move back to the nearest visible area.
 Selecting **None** hides a pet for that session without forgetting the directory's character choice.
+
+Enable **Habitat** in the manager to group pets into rooms. New pets fill vacant rooms automatically;
+turn off automatic placement to move them in yourself. Drag a pet into an empty room, onto another pet
+to swap positions, or outside to move out. A pet moved out stays outside until you move it back or select
+**Fill vacant rooms**. Drag the header handle to move the whole habitat.
+Room backgrounds can be hidden; the handle stays visible, and rooms reappear while dragging a pet.
+Room assignments and the habitat position survive restarts. Turning the habitat off restores free-placement
+positions. Choose a fixed **columns × rows** layout (for example, 4 × 2 gives eight rooms); overflow pets
+stay outside. The habitat scales down when needed to fit the screen, and an unplugged display returns
+the whole group to a visible screen.
 
 Double-click a pet or choose **Show Terminal** to focus its session. For native Ghostty tabs, Ghostty 1.3+
 and macOS Automation permission are required. DeskPets matches the session's working directory, then its

@@ -60,17 +60,19 @@ public struct AppConfig: Codable, Equatable, Sendable {
     public var bindings: [PetBinding] = []
     public var directoryPets: [String: DirectoryPetPreference]
     public var directoryPositions: [String: [PetPosition]]
+    public var home: PetHome
 
     public init(showPets: Bool = true, petSize: Int = 96, bindings: [PetBinding] = [],
                 animationDuration: Double? = nil, language: AppLanguage = .system,
                 directoryPets: [String: DirectoryPetPreference] = [:],
-                directoryPositions: [String: [PetPosition]] = [:]) {
+                directoryPositions: [String: [PetPosition]] = [:], home: PetHome = PetHome()) {
         self.showPets = showPets
         self.petSize = petSize
         self.bindings = bindings
         self.language = language
         self.directoryPets = directoryPets
         self.directoryPositions = directoryPositions
+        self.home = home
         self.animationDuration = animationDuration.flatMap { Self.animationDurationRange.contains($0) ? $0 : nil }
     }
 
@@ -81,6 +83,7 @@ public struct AppConfig: Codable, Equatable, Sendable {
         bindings = try container.decodeIfPresent([PetBinding].self, forKey: .bindings) ?? []
         directoryPets = try container.decodeIfPresent([String: DirectoryPetPreference].self, forKey: .directoryPets) ?? [:]
         directoryPositions = try container.decodeIfPresent([String: [PetPosition]].self, forKey: .directoryPositions) ?? [:]
+        home = try container.decodeIfPresent(PetHome.self, forKey: .home) ?? PetHome()
         language = (try? container.decode(AppLanguage.self, forKey: .language)) ?? .system
         animationDuration = (try? container.decodeIfPresent(Double.self, forKey: .animationDuration))
             .flatMap { Self.animationDurationRange.contains($0) ? $0 : nil }

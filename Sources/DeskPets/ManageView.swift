@@ -9,6 +9,7 @@ struct ManageView: View {
     var body: some View {
         TabView {
             SettingsTab().tabItem { Text(L.t("settings.title")) }
+            HomeTab().tabItem { Text(L.t("home.title")) }
             SessionsTab().tabItem { Text(L.t("sessions.title")) }
             CharactersTab().tabItem { Text(L.t("characters.title")) }
             HooksTab().tabItem { Text(L.t("hooks.title")) }
@@ -63,6 +64,47 @@ private struct SettingsTab: View {
             Text(L.t("animation.help"))
                 .font(.caption).foregroundStyle(.secondary)
             Spacer()
+        }
+        .padding(12)
+    }
+}
+
+private struct HomeTab: View {
+    @EnvironmentObject private var app: AppController
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Toggle(L.t("home.enable"), isOn: Binding(
+                get: { app.config.home.enabled }, set: { app.setHomeEnabled($0) }))
+            VStack(alignment: .leading, spacing: 16) {
+                Toggle(L.t("home.showGrid"), isOn: Binding(
+                    get: { app.config.home.showsGrid }, set: { app.setHomeShowsGrid($0) }))
+                Toggle(L.t("home.autoAssign"), isOn: Binding(
+                    get: { app.config.home.automaticallyAssign }, set: { app.setHomeAutoAssign($0) }))
+                HStack(spacing: 12) {
+                    Picker(L.t("home.columns"), selection: Binding(
+                        get: { app.config.home.columns }, set: { app.setHomeColumns($0) })) {
+                        ForEach(1...8, id: \.self) { Text(String($0)).tag($0) }
+                    }
+                    Text("×").foregroundStyle(.secondary)
+                    Picker(L.t("home.rows"), selection: Binding(
+                        get: { app.config.home.rows }, set: { app.setHomeRows($0) })) {
+                        ForEach(1...8, id: \.self) { Text(String($0)).tag($0) }
+                    }
+                    Text(L.format("home.capacity", app.config.home.columns * app.config.home.rows))
+                        .foregroundStyle(.secondary)
+                }
+                .fixedSize()
+                Button(L.t("home.moveAll")) { app.moveAllPetsHome() }
+            }
+            .disabled(!app.config.home.enabled)
+            Divider()
+            Text(L.t("home.help"))
+                .fixedSize(horizontal: false, vertical: true)
+            Text(L.t("home.screenHelp"))
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
         }
         .padding(12)
     }

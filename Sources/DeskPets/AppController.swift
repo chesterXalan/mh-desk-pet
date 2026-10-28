@@ -30,6 +30,10 @@ final class AppController: ObservableObject {
     private var hasScannedSessions = false
     private var names: [String: String] = [:]
     private var scanCount = 0
+    private let homeWindow = PetHomeWindowController()
+    private var homeLayout: PetHomeLayout?
+    private var draggingPet: (id: UUID, origin: CGPoint)?
+    private var movingHome = false
 
     init() {
         library = CharacterLibrary(builtInRoot: Self.builtInCharacters, customRoot: paths.characters)
@@ -42,6 +46,8 @@ final class AppController: ObservableObject {
         characters = library.list()
         if config.migrateCharacterNames(using: characters) { save() }
         refreshHookStatus()
+        homeWindow.onDrag = { [weak self] point, ended in self?.moveHome(to: point, ended: ended) }
+        homeWindow.menuProvider = { [weak self] in self?.homeMenu() ?? NSMenu() }
     }
 
     func start() {
@@ -122,22 +128,46 @@ final class AppController: ObservableObject {
         updatePets()
     }
 
-    private func updatePets() {
+    private func updatePets(moveAllHome: Bool = false) {
+        prepareHome(moveAll: moveAllHome)
         let byId = Dictionary(sessions.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let largest = CGFloat(config.petSize) * (characters.map(\.displayScale).max() ?? 1)
+        let dockScale = homeLayout.map { min(1, ($0.cellSize - 12) / largest) } ?? 1
         var alive = Set<UUID>()
         for binding in config.bindings {
             guard let sessionId = resolved[binding.id], let session = byId[sessionId],
                   let character = characters.first(where: { $0.name == binding.character }) else { continue }
             alive.insert(binding.id)
-            let size = CGFloat(config.petSize) * character.displayScale
+            let room = homeLayout.flatMap { config.home.slot(for: binding.id, capacity: $0.capacity) }
+            let requestedSize = CGFloat(config.petSize) * character.displayScale
+            let size = room == nil ? requestedSize : requestedSize * dockScale
             let pet = pets[binding.id] ?? makePet(for: binding, size: size)
-            pet.update(session: session, character: character, size: size, animationDuration: config.animationDuration)
+            pet.update(session: session, character: character, size: size, animationDuration: config.animationDuration,
+                       constrainToScreen: false)
+            if draggingPet?.id != binding.id {
+                if let room, let layout = homeLayout {
+                    pet.setOrigin(layout.origin(for: room, petSize: size))
+                } else {
+                    if let x = binding.x, let y = binding.y { pet.setOrigin(CGPoint(x: x, y: y)) }
+                    if let layout = homeLayout, !config.home.outside.contains(binding.id) {
+                        pet.setOrigin(PetPlacement.outsideOrigin(for: pet.frame, avoiding: layout.frame,
+                                                               screens: NSScreen.screens.map(\.visibleFrame)))
+                    } else {
+                        pet.keepOnScreen()
+                    }
+                }
+            }
             if config.showPets { pet.show() } else { pet.hide() }
         }
         for (id, pet) in pets where !alive.contains(id) {
+            if draggingPet?.id == id {
+                draggingPet = nil
+                homeWindow.highlight(nil)
+            }
             pet.close()
             pets[id] = nil
         }
+        renderHome()
     }
 
     private func makePet(for binding: PetBinding, size: CGFloat) -> PetWindowController {
@@ -151,9 +181,15 @@ final class AppController: ObservableObject {
         }
         let pet = PetWindowController(bindingId: binding.id, origin: origin, size: size)
         pet.onMoved = { [weak self] id, point in self?.petMoved(id, to: point) }
+        pet.onDragBegan = { [weak self] id, point in
+            self?.draggingPet = (id, point)
+            self?.renderHome()
+        }
+        pet.onDragEnded = { [weak self] id, point in self?.finishPetDrag(id, at: point) }
         pet.menuProvider = { [weak self] id in self?.contextMenu(for: id) ?? NSMenu() }
         pets[binding.id] = pet
-        petMoved(binding.id, to: pet.frame.origin)
+        config.setPosition(binding.id, x: pet.frame.minX, y: pet.frame.minY)
+        saveSoon()
         Log.write("pet shown for \(binding.provider.rawValue) \(binding.cwd) as \(binding.character)")
         return pet
     }
@@ -182,7 +218,7 @@ final class AppController: ObservableObject {
     // MARK: - Bindings
 
     func repositionPets() {
-        for pet in pets.values { pet.keepOnScreen() }
+        updatePets()
     }
 
     func binding(for session: AgentSession) -> PetBinding? {
@@ -220,8 +256,127 @@ final class AppController: ObservableObject {
     }
 
     private func petMoved(_ id: UUID, to origin: CGPoint) {
+        if draggingPet?.id == id {
+            homeWindow.highlight(homeLayout?.slot(at: NSEvent.mouseLocation))
+            return
+        }
         config.setPosition(id, x: origin.x, y: origin.y)
         saveSoon()
+    }
+
+    // MARK: - Pet home
+
+    private var homeResidents: [UUID] {
+        config.bindings.filter { binding in
+            resolved[binding.id] != nil && characters.contains { $0.name == binding.character }
+        }.map(\.id)
+    }
+
+    private func prepareHome(moveAll: Bool) {
+        guard config.home.enabled else {
+            homeLayout = nil
+            return
+        }
+        var home = config.home
+        let active = homeResidents
+        if moveAll { home.outside.subtract(active) }
+        let largest = CGFloat(config.petSize) * (characters.map(\.displayScale).max() ?? 1)
+        let layout = PetHomeLayout(home: home, petSize: largest,
+                                   screens: NSScreen.screens.map(\.visibleFrame), constrain: !movingHome)
+        home.reconcile(active: active, capacity: layout.capacity, moveAll: moveAll)
+        home.x = layout.frame.minX
+        home.y = layout.frame.minY
+        if home != config.home {
+            config.home = home
+            saveSoon()
+        }
+        homeLayout = layout
+    }
+
+    private func renderHome() {
+        guard let layout = homeLayout else {
+            homeWindow.hide()
+            return
+        }
+        let occupied = Set(homeResidents.compactMap { config.home.slot(for: $0, capacity: layout.capacity) })
+        homeWindow.update(layout: layout, occupied: occupied, showsGrid: config.home.showsGrid || draggingPet != nil,
+                          visible: config.showPets)
+    }
+
+    private func finishPetDrag(_ id: UUID, at point: CGPoint) {
+        guard let drag = draggingPet, drag.id == id, let pet = pets[id] else { return }
+        if let layout = homeLayout, let room = layout.slot(at: point) {
+            if let displaced = config.home.place(id, in: room, active: Set(homeResidents), capacity: layout.capacity) {
+                config.setPosition(displaced, x: drag.origin.x, y: drag.origin.y)
+            }
+        } else {
+            if config.home.enabled { config.home.leave(id) }
+            config.setPosition(id, x: pet.frame.minX, y: pet.frame.minY)
+        }
+        draggingPet = nil
+        homeWindow.highlight(nil)
+        updatePets()
+        save()
+    }
+
+    private func moveHome(to point: CGPoint, ended: Bool) {
+        movingHome = !ended
+        config.home.x = point.x
+        config.home.y = point.y
+        updatePets()
+        if ended { save() } else { saveSoon() }
+    }
+
+    func setHomeEnabled(_ enabled: Bool) {
+        config.home.enabled = enabled
+        updatePets()
+        save()
+    }
+
+    func setHomeShowsGrid(_ show: Bool) {
+        config.home.showsGrid = show
+        renderHome()
+        save()
+    }
+
+    func setHomeAutoAssign(_ enabled: Bool) {
+        config.home.automaticallyAssign = enabled
+        updatePets()
+        save()
+    }
+
+    func setHomeColumns(_ columns: Int) {
+        config.home.columns = min(max(columns, 1), 8)
+        updatePets()
+        save()
+    }
+
+    func setHomeRows(_ rows: Int) {
+        config.home.rows = min(max(rows, 1), 8)
+        updatePets()
+        save()
+    }
+
+    func moveAllPetsHome() {
+        updatePets(moveAllHome: true)
+        save()
+    }
+
+    private func homeMenu() -> NSMenu {
+        let menu = NSMenu()
+        let grid = ClosureMenuItem(title: L.t("home.showGrid")) { [weak self] in
+            guard let self else { return }
+            self.setHomeShowsGrid(!self.config.home.showsGrid)
+        }
+        grid.state = config.home.showsGrid ? .on : .off
+        menu.addItem(grid)
+        menu.addItem(ClosureMenuItem(title: L.t("home.moveAll")) { [weak self] in self?.moveAllPetsHome() })
+        menu.addItem(ClosureMenuItem(title: L.t("settings.open")) {
+            (NSApp.delegate as? AppDelegate)?.openManager()
+        })
+        menu.addItem(.separator())
+        menu.addItem(ClosureMenuItem(title: L.t("home.disable")) { [weak self] in self?.setHomeEnabled(false) })
+        return menu
     }
 
     func setShowPets(_ show: Bool) {
