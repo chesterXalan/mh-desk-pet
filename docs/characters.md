@@ -49,6 +49,9 @@ The importer preserves alpha and uses one scale across all frames with a shared 
 Keep original sheets and drafts outside Git; version the selected PNG frames and metadata only.
 The [2026-10-27 prompt set](artwork-prompts/flagship-expansion.json) records the built-in image generation
 and spacing repairs used for the flagship expansion.
+The 2026-10-28 expansion adds two more groups of eight; their exact prompts, spacing repairs, and metadata
+are recorded in [batch 1](artwork-prompts/expansion-2026-10-28-batch-1.json) and
+[batch 2](artwork-prompts/expansion-2026-10-28-batch-2.json).
 
 Dozens of characters at this resolution fit comfortably in regular Git. Avoid committing app bundles and
 repeated exports; reconsider Git LFS if individual source assets or accumulated history become substantially larger.
