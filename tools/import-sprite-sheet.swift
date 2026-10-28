@@ -1,7 +1,7 @@
 import AppKit
 import ImageIO
 
-// 將已檢查的 4 × 3 透明圖集切成影格，統一縮放比例與站立基準。
+// Split a reviewed 4 × 3 transparent sprite sheet into frames with a shared scale and ground baseline.
 guard CommandLine.arguments.count == 3 else {
     fatalError("Usage: swift tools/import-sprite-sheet.swift SHEET.png OUTPUT_DIRECTORY")
 }
@@ -32,7 +32,7 @@ func geometry(of image: CGImage) -> (bounds: CGRect, anchor: CGFloat) {
         guard minX > 0, minY > 0, maxX < width - 1, maxY < height - 1 else {
             fatalError("Sprite touches a cell boundary; repair its transparent gutters before importing")
         }
-        // 用底部腳掌範圍對齊，避免特效擴張或轉頭時整隻寵物左右跳動。
+        // Align the lower foot region to prevent lateral shifts caused by expanding effects or head turns.
         var footMinX = width, footMaxX = -1
         for y in (maxY - (maxY - minY) / 8)...maxY {
             for x in minX...maxX where buffer[(y * width + x) * 4 + 3] >= 128 {

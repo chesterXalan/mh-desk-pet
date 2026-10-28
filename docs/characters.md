@@ -18,6 +18,7 @@ Use a consistent position and scale across frames to avoid jitter.
 
 ```json
 {
+  "emID": 57,
   "displayScale": 1.0,
   "names": {
     "en": "Zinogre",
@@ -28,6 +29,8 @@ Use a consistent position and scale across frames to avoid jitter.
 }
 ```
 
+- `emID`: numeric base-species EM resource ID (`57` means `em057`). Required for bundled monsters;
+  optional for imported characters. See [Monster numbering](#monster-numbering).
 - `displayScale`: multiplier for the selected pet size, from 0.5 to 2; defaults to 1.
 - `names`: localized labels; missing translations fall back to English, then the folder ID.
 - `aliases`: previous folder IDs for built-in characters. Existing bindings migrate automatically;
@@ -58,3 +61,25 @@ repeated exports; reconsider Git LFS if individual source assets or accumulated 
 
 UI translations live in `Resources/{en,zh-Hant,ja}.lproj/Localizable.strings`.
 Keep keys and format placeholders consistent across languages; `make test` checks them.
+
+## Monster numbering
+
+The app and generated roster sort monsters by the numeric `emID` in `character.json`.
+Built-in characters come first; characters without an ID sort after numbered characters within
+their group, with folder names breaking ties. Custom characters remain after the built-in roster.
+Folder IDs and localized display names stay unchanged, so existing bindings keep working.
+
+EM IDs identify game resources, rather than encyclopedia entries, icon indices, or popularity ranks.
+The roster displays a normalized `emNNN` code for each base species; for example, Rathalos is
+`em002` and Zinogre is `em057`. Different games may pad the number differently or append form suffixes.
+
+Mappings are checked against these community-maintained game-data references:
+
+- [World / Iceborne EM mapping](https://mhw.poedb.tw/eng/em)
+- [Rise / Sunbreak monster resources](https://mhrise.mhrice.info/monster.html)
+- [GU / XX monster model IDs](https://github.com/Alexander-Lancellott/MHGU-MHXX-HP-Overlay-For-Switch-Emulator/blob/main/modules/models.py)
+  for Lagiacrus, Gammoth, and Valstrax
+- [Wilds EM enum mapping](https://github.com/dtlnor/MonsterHunterWildsModding/wiki/Monster-IDs)
+  for Arkveld (`EM0160_00_0`)
+
+Add the verified EM ID when adding a built-in monster, then run `make catalog` to regenerate the roster.

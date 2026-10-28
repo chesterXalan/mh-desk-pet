@@ -134,7 +134,7 @@ public enum AgentClassifier {
         return nil
     }
 
-    /// 從啟動參數取得對話 ID，包含 Codex 的 `resume UUID`。
+    /// Read the conversation ID from launch arguments, including Codex `resume UUID`.
     public static func sessionId(arguments: [String]) -> String? {
         if arguments.count > 2, (arguments[0] as NSString).lastPathComponent == "codex",
            arguments[1] == "resume", UUID(uuidString: arguments[2]) != nil {

@@ -28,7 +28,7 @@ public enum GhosttyControl {
         guard let directory = canonicalDirectory(directory) else { throw GhosttyFocusError.notFound }
         let matches = terminals.filter { canonicalDirectory($0.directory) == directory }
         guard let target = matches.first else {
-            // 非 tmux 的 shell integration 目錄可能過期，只接受唯一的完整對話標題。
+            // Shell integration may report a stale directory outside tmux; require a unique full conversation title.
             let title = title.map(CmuxTree.cleanTitle) ?? ""
             guard allowTitleFallback, !title.isEmpty else { throw GhosttyFocusError.notFound }
             let titled = terminals.filter { CmuxTree.cleanTitle($0.title) == title }
@@ -37,7 +37,7 @@ public enum GhosttyControl {
             return target
         }
         if matches.count == 1 { return target }
-        // CLI 標題會帶有狀態符號；只接受同目錄內唯一的完整標題配對。
+        // CLI titles include status symbols; require a unique full-title match within the same directory.
         let title = title.map(CmuxTree.cleanTitle) ?? ""
         guard !title.isEmpty else { throw GhosttyFocusError.ambiguous }
         let titled = matches.filter { CmuxTree.cleanTitle($0.title) == title }

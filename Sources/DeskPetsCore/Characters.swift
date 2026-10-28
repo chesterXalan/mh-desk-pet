@@ -8,6 +8,7 @@ public struct CharacterInfo: Identifiable, Hashable, Sendable {
     public var displayScale: Double = 1
     public var names: [String: String] = [:]
     public var aliases: [String] = []
+    public var emID: Int?
 
     public var id: String { name }
 
@@ -109,15 +110,20 @@ public struct CharacterLibrary: Sendable {
                 let scale = options?.displayScale ?? 1
                 return CharacterInfo(name: directory.lastPathComponent, directory: directory, builtIn: builtIn,
                                      displayScale: (0.5...2).contains(scale) ? scale : 1,
-                                     names: options?.names ?? [:], aliases: options?.aliases ?? [])
+                                     names: options?.names ?? [:], aliases: options?.aliases ?? [], emID: options?.emID)
             }
-            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            .sorted {
+                let lhs = $0.emID ?? Int.max
+                let rhs = $1.emID ?? Int.max
+                return lhs == rhs ? $0.name.localizedStandardCompare($1.name) == .orderedAscending : lhs < rhs
+            }
     }
 
     private struct Metadata: Decodable {
         var displayScale: Double?
         var names: [String: String]?
         var aliases: [String]?
+        var emID: Int?
     }
 
     private static func metadata(in directory: URL) -> Metadata? {

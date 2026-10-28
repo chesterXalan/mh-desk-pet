@@ -53,6 +53,27 @@ import Testing
         #expect(decoded == config)
     }
 
+    @Test func bundledMonstersHaveUniqueEMIDsAndAnUpToDateRoster() throws {
+        struct Metadata: Decodable { let emID: Int }
+        let folders = try FileManager.default.contentsOfDirectory(at: resources.appendingPathComponent("Characters"),
+                                                                  includingPropertiesForKeys: nil)
+        let characters = try folders.map { folder in
+            (name: folder.lastPathComponent, metadata: try JSONDecoder().decode(Metadata.self,
+                from: Data(contentsOf: folder.appendingPathComponent("character.json"))))
+        }.sorted { $0.metadata.emID < $1.metadata.emID }
+        let ids = characters.map { $0.metadata.emID }
+        #expect(ids.allSatisfy { $0 > 0 })
+        #expect(Set(ids).count == ids.count)
+        let rosterURL = resources.deletingLastPathComponent().appendingPathComponent("docs/monsters.md")
+        let rows = try String(contentsOf: rosterURL, encoding: .utf8).components(separatedBy: "\n")
+            .filter { $0.hasPrefix("| `em") }
+        #expect(rows.count == characters.count)
+        for (row, character) in zip(rows, characters) {
+            #expect(row.hasPrefix("| `\(String(format: "em%03d", character.metadata.emID))` |"))
+            #expect(row.contains("../Resources/Characters/\(character.name)\""))
+        }
+    }
+
     @Test(arguments: ["null", "42", "\"unknown\""])
     func invalidLanguageKeepsOtherSettings(value: String) throws {
         let data = Data("{\"language\":\(value),\"petSize\":128,\"animationDuration\":1.2}".utf8)

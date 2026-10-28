@@ -7,7 +7,7 @@ public enum PetHomeEdge: String, CaseIterable, Codable, Sendable {
     var isColumn: Bool { self == .left || self == .right }
 }
 
-/// 相容舊版分開保存的加蓋格數；下次擴縮時會併入目前格數。
+/// Preserve legacy expansion counts until the next resize folds them into the current dimensions.
 public struct PetHomeExpansion: Codable, Equatable, Sendable {
     public var left = 0
     public var right = 0
@@ -77,14 +77,14 @@ extension PetHome {
         }) {
             layout = resize(layout: layout, edge: edge, growing: false)
         }
-        // 小螢幕上縮回後可能恢復原尺寸，同一輪就完成縮放與邊界校正。
+        // Shrinking may restore the original scale on small screens; fit and clamp within the same update.
         let settled = PetHomeLayout(home: self, petSize: petSize, screens: screens, constrain: constrain)
         x = settled.frame.minX
         y = settled.frame.minY
         return settled
     }
 
-    /// 擴充和預覽共用幾何，舊房間的螢幕位置保持不變。
+    /// Share geometry between expansion and previews while preserving existing room positions.
     @discardableResult
     public mutating func expand(toward edge: PetHomeEdge, layout: PetHomeLayout,
                                 screens: [CGRect]) -> PetHomeLayout? {

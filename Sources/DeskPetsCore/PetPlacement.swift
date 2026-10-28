@@ -2,7 +2,7 @@ import CoreGraphics
 import Foundation
 
 public enum PetPlacement {
-    /// 滿房時保留自由位置；若原位被宿舍蓋住，選距離最近且放得下的外側區域。
+    /// Keep free-placement positions when full; if covered by the habitat, choose the nearest outside area that fits.
     public static func outsideOrigin(for pet: CGRect, avoiding home: CGRect, screens: [CGRect]) -> CGPoint {
         let visible = visibleOrigin(for: pet, screens: screens)
         if !CGRect(origin: visible, size: pet.size).intersects(home) { return visible }
@@ -19,7 +19,7 @@ public enum PetPlacement {
         } ?? visible
     }
 
-    /// 保留可見位置；螢幕拔除或縮小時，移回距離最近的可用範圍。
+    /// Keep visible positions; when a display is removed or shrinks, move to the nearest available area.
     public static func visibleOrigin(for pet: CGRect, screens: [CGRect]) -> CGPoint {
         if screens.contains(where: { $0.contains(pet) }) { return pet.origin }
         return screens.map { screen in

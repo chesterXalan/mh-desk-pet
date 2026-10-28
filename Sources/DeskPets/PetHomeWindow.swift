@@ -1,7 +1,7 @@
 import AppKit
 import DeskPetsCore
 
-/// 宿舍以完整框線取得視窗焦點，小把手在隱藏格線時也能選取與搬家。
+/// The habitat frame accepts window focus; its handle supports selection and moving even when rooms are hidden.
 @MainActor
 final class PetHomeWindowController: NSObject, NSWindowDelegate {
     var onDrag: ((CGPoint, Bool) -> Void)?
@@ -123,7 +123,7 @@ final class PetHomeWindowController: NSObject, NSWindowDelegate {
     private func scheduleExternalMove() {
         guard !updating, background.isVisible, layout != nil, background.frame != renderedFrame else { return }
         externalMove?.cancel()
-        // 視窗管理工具可能分開設定座標與尺寸，合併完成後再帶整組移動。
+        // Window managers may update position and size separately; coalesce both before moving the group.
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
             self.externalMove = nil

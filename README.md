@@ -7,10 +7,12 @@
 Monster Hunter desktop companions for Claude Code and Codex on macOS, built with Swift and AppKit.
 Each pet follows a CLI session and animates when it is working, waiting for input, or idle.
 
-![Monster companions grouped by state: Zinogre, Mizutsune, Rathalos, and Valstrax working; Velkhana and Tigrex waiting for input; Nargacuga and Nergigante idle](docs/assets/preview.gif)
+![Monster companions grouped by state: Rathalos, Zinogre, Mizutsune, and Valstrax working; Tigrex and Velkhana waiting for input; Nargacuga and Nergigante idle](docs/assets/preview.gif)
 
-Selected companions, shown at a 1.2-second loop. Every monster has all three animations.
+Selected companions, grouped by state and ordered by EM ID within each group, at a 1.2-second loop.
+Every monster has all three animations.
 Browse the [full monster roster](docs/monsters.md) for previews and names in English, Traditional Chinese, and Japanese.
+The roster and in-app character lists follow numeric EM ID order.
 
 - English, Traditional Chinese, and Japanese UI and monster names
 - Adjustable animation speed and size (64–256 px), saved automatically
@@ -88,6 +90,14 @@ Source filenames are unrestricted; the app copies and names the files automatica
 To add a built-in monster, see [Character assets](docs/characters.md).
 PNG frames and character metadata are versioned; GIFs are generated during the build.
 The app icon source and GitHub preview are versioned too; see [Branding](docs/branding.md).
+
+## Development
+
+Write code comments and documentation in English. Keep user-facing text localized in English,
+Traditional Chinese, and Japanese. Write new commit messages in English using Gitmoji + Conventional
+Commits, for example `✨ feat: Add a monster companion`.
+
+Run `make test` and `make app` for code changes, and `make catalog` when changing character metadata.
 
 ## Local data
 

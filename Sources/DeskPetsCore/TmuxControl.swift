@@ -59,7 +59,7 @@ public enum TmuxControl {
                          "-t", location.paneId]) != nil
     }
 
-    // 使用 client 目前的 session，而非即將切換的 pane，取得外層終端現有的標題。
+    // Read the outer terminal's current title from the client's current session before switching panes.
     public static func terminalTitle(for location: TmuxLocation, client: TmuxClient,
                                      run: (String, [String]) -> Data? = SessionNamer.run) -> String? {
         guard let data = run(defaultCLI, ["-S", location.socketPath, "display-message", "-p", "-c", client.tty,

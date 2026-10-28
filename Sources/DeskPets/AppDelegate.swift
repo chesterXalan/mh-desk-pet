@@ -101,7 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             window.center()
             manageWindow = window
         }
-        // 等選單收起後再取回焦點，只在使用者開啟設定時帶到前景。
+        // Wait for the menu to close before taking focus; bring settings forward only when explicitly opened.
         DispatchQueue.main.async { [weak self] in
             guard let self, let window = self.manageWindow else { return }
             if window.isMiniaturized { window.deminiaturize(nil) }

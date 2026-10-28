@@ -1,6 +1,6 @@
 import Foundation
 
-/// 目前工作階段的角色與位置；空白角色代表隱藏此工作階段的寵物。
+/// Character and position for an active session; an empty character hides its pet.
 public struct PetBinding: Codable, Equatable, Identifiable, Sendable {
     public var id: UUID
     public var provider: Provider
@@ -29,7 +29,7 @@ public struct PetBinding: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
-/// 同一目錄下次啟動時優先使用的角色與位置，不區分 CLI 類型。
+/// Preferred character and position for the next session in a directory, regardless of CLI provider.
 public struct DirectoryPetPreference: Codable, Equatable, Sendable {
     public var character: String
     public var x: Double?
@@ -42,7 +42,7 @@ public struct DirectoryPetPreference: Codable, Equatable, Sendable {
     }
 }
 
-/// 同目錄可重用的位置；ID 沿用寵物配對，工作階段結束後仍保留。
+/// Reusable position within a directory; keeps the binding ID after its session ends.
 public struct PetPosition: Codable, Equatable, Identifiable, Sendable {
     public var id: UUID
     public var x: Double
@@ -138,7 +138,7 @@ public struct AppConfig: Codable, Equatable, Sendable {
     }
 
     fileprivate mutating func rememberPositions() {
-        // 先保存舊版在線配對的位置，再清除已結束的工作階段。
+        // Save positions from legacy active bindings before removing ended sessions.
         for binding in bindings { rememberPosition(from: binding) }
         for (directory, preference) in directoryPets where directoryPositions[directory, default: []].isEmpty {
             guard let x = preference.x, let y = preference.y else { continue }
@@ -161,8 +161,8 @@ public struct AppConfig: Codable, Equatable, Sendable {
 }
 
 public enum BindingResolver {
-    /// 保留在線配對，為新工作階段自動挑選角色，並移除已結束的工作階段。
-    /// 每個目錄第一隻優先沿用偏好，其餘角色優先避開桌面上已使用的角色。
+    /// Keep active bindings, choose characters for new sessions, and remove ended sessions.
+    /// Prefer the saved character for the first pet in each directory, then avoid characters already in use.
     public static func resolve(_ config: inout AppConfig, sessions: [AgentSession], characters: [String],
                                choose: ([String]) -> String? = { $0.randomElement() }) -> [UUID: String] {
         let available = Set(characters)

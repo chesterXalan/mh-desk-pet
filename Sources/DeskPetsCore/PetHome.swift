@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-/// 宿舍只記房間分配，自由擺放的位置仍由原本的目錄設定保存。
+/// The habitat stores room assignments; directory preferences retain free-placement positions.
 public struct PetHome: Codable, Equatable, Sendable {
     public var enabled = false
     public var showsGrid = true
@@ -35,7 +35,7 @@ public struct PetHome: Codable, Equatable, Sendable {
         outside = try container.decodeIfPresent(Set<UUID>.self, forKey: .outside) ?? []
     }
 
-    /// 舊房客先保留房間；已離線的房間可重用，手動搬出的魔物不會被吸回來。
+    /// Keep existing residents in place, reuse vacant rooms, and leave manually moved-out pets outside.
     public mutating func reconcile(active: [UUID], capacity: Int, moveAll: Bool = false) {
         guard enabled else { return }
         slots = Array(slots.prefix(capacity))
@@ -58,7 +58,7 @@ public struct PetHome: Codable, Equatable, Sendable {
         slots.prefix(capacity).firstIndex { $0 == id }
     }
 
-    /// 從外面換入有人住的房間時，傳回被換出去的房客，交由視窗層放到起點。
+    /// Return the displaced resident so the window layer can move it to the incoming pet's starting position.
     @discardableResult
     public mutating func place(_ id: UUID, in target: Int, active: Set<UUID>, capacity: Int) -> UUID? {
         guard slots.indices.contains(target), target < capacity else { return nil }
@@ -83,7 +83,7 @@ public struct PetHome: Codable, Equatable, Sendable {
 
 }
 
-/// 宿舍與每格的螢幕座標；顯示或隱藏背景不會改變吸附位置。
+/// Screen coordinates for the habitat and its rooms; background visibility does not affect snap positions.
 public struct PetHomeLayout: Equatable {
     public static let padding: CGFloat = 10
     public static let gap: CGFloat = 6

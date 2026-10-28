@@ -53,7 +53,7 @@ public struct AgentSession: Identifiable, Equatable, Sendable {
     /// The cmux tab hosting the session, read from the process environment.
     public var cmux: CmuxLocation?
     public var tmux: TmuxLocation?
-    /// 啟動參數中的對話 ID（`--session-id`、`--resume` 或 Codex `resume UUID`）。
+    /// Conversation ID from launch arguments (`--session-id`, `--resume`, or Codex `resume UUID`).
     public var launchSessionId: String?
 
     public init(provider: Provider, pid: Int32, startTime: Double, cwd: String,
@@ -78,7 +78,7 @@ public struct AgentSession: Identifiable, Equatable, Sendable {
         return name.isEmpty || name == "/" ? cwd : name
     }
 
-    /// 目錄與明確標示的 PID，供工作階段列表辨識。
+    /// Directory and explicitly labeled PID for identifying sessions in the list.
     public var location: String { "\(folderName) · PID \(pid)" }
 
     /// The friendly name (/rename, cmux tab, or AI title) when known, else the location.

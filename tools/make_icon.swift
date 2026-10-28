@@ -1,5 +1,5 @@
-// 從版控的圖示原稿產生 macOS 各尺寸圖示。
-// 執行方式：swift tools/make_icon.swift。
+// Generate macOS icon sizes from the versioned source artwork.
+// Usage: swift tools/make_icon.swift.
 import AppKit
 import ImageIO
 
@@ -15,7 +15,7 @@ func render(size: Int) -> Data {
     let ctx = CGContext(data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: 0,
                         space: CGColorSpace(name: CGColorSpace.sRGB)!,
                         bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
-    // 保留原稿的透明邊緣，並為 macOS 圖示留出外圍空間。
+    // Preserve transparent edges and leave padding around the macOS icon.
     let scale = s * 0.84 / CGFloat(max(icon.width, icon.height))
     let width = CGFloat(icon.width) * scale, height = CGFloat(icon.height) * scale
     ctx.interpolationQuality = .high

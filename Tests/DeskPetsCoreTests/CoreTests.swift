@@ -337,6 +337,30 @@ private func temporaryDirectory() throws -> URL {
         return url
     }
 
+    @Test func sortsByNumericEMIDWithLegacyAndCustomCharactersPreserved() throws {
+        let root = try temporaryDirectory()
+        let entries: [(String, Int?, Bool)] = [
+            ("a-late", 160, true), ("b-early", 2, true), ("c-middle", 11, true),
+            ("d-same-id", 2, true), ("a-legacy", nil, true),
+            ("custom-10", nil, false), ("custom-2", nil, false),
+        ]
+        for (name, emID, builtIn) in entries {
+            let directory = root.appendingPathComponent("\(builtIn ? "builtin" : "custom")/\(name)")
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            _ = try gif(in: directory, name: "idle.gif")
+            if let emID {
+                try Data("{\"emID\":\(emID)}".utf8).write(to: directory.appendingPathComponent("character.json"))
+            }
+        }
+        let library = CharacterLibrary(builtInRoot: root.appendingPathComponent("builtin"),
+                                       customRoot: root.appendingPathComponent("custom"))
+        #expect(library.list().map(\.name) == [
+            "b-early", "d-same-id", "c-middle", "a-late", "a-legacy", "custom-2", "custom-10",
+        ])
+        #expect(library.character(named: "a-late")?.emID == 160)
+        #expect(library.character(named: "a-legacy")?.emID == nil)
+    }
+
     @Test func importsListsAndDeletes() throws {
         let root = try temporaryDirectory()
         let builtIn = root.appendingPathComponent("builtin/cat", isDirectory: true)

@@ -2,6 +2,7 @@ import AppKit
 import ImageIO
 
 struct Character: Decodable {
+    let emID: Int
     let displayScale: Double
     let names: [String: String]
 }
@@ -28,12 +29,20 @@ func text(_ value: String, in rect: CGRect, size: CGFloat, color: NSColor) {
     ])
 }
 
-// 預覽挑選不同動作；原始角色影格與 App 設定不受影響。
+// Show different animation states without changing source frames or app settings.
 let groups: [(state: String, label: String, color: NSColor, characters: [String])] = [
     ("working", "Working", color(0x86DCC4), ["zinogre", "mizutsune", "rathalos", "valstrax"]),
     ("waiting", "Waiting for input", color(0xE8BC78), ["velkhana", "tigrex"]),
     ("idle", "Idle", color(0xA4B9D3), ["nargacuga", "nergigante"]),
 ]
+let metadata = try Dictionary(uniqueKeysWithValues: groups.flatMap(\.characters).map { id in
+    let file = root.appendingPathComponent("Resources/Characters/\(id)/character.json")
+    return (id, try JSONDecoder().decode(Character.self, from: Data(contentsOf: file)))
+})
+let orderedGroups = groups.map { group in
+    (state: group.state, label: group.label, color: group.color,
+     characters: group.characters.sorted { metadata[$0]!.emID < metadata[$1]!.emID })
+}
 let cell: CGFloat = 200
 let margin: CGFloat = 36
 let gap: CGFloat = 36
@@ -52,7 +61,7 @@ for frame in 0..<4 {
 
     var groupX = margin
     var characterIndex = 0
-    for group in groups {
+    for group in orderedGroups {
         let groupWidth = cell * CGFloat(group.characters.count)
         text(group.label, in: CGRect(x: groupX, y: 293, width: groupWidth, height: 34),
              size: 26, color: group.color)
@@ -61,19 +70,18 @@ for frame in 0..<4 {
 
         for (index, id) in group.characters.enumerated() {
             let directory = root.appendingPathComponent("Resources/Characters/\(id)")
-            let metadata = try JSONDecoder().decode(Character.self,
-                from: Data(contentsOf: directory.appendingPathComponent("character.json")))
-            // 錯開起始影格，避免所有魔物同步動作；每隻仍維持 1.2 秒一輪。
+            let character = metadata[id]!
+            // Stagger initial frames to avoid synchronized movement while keeping a 1.2-second loop for each monster.
             let source = directory.appendingPathComponent("\(group.state)/\((frame + characterIndex) % 4).png")
             guard let imageSource = CGImageSourceCreateWithURL(source as CFURL, nil),
                   let sprite = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) else {
                 fatalError("Cannot read preview frame: \(source.path)")
             }
             let x = groupX + CGFloat(index) * cell
-            let size = 196 * metadata.displayScale
+            let size = 196 * character.displayScale
             context.interpolationQuality = .high
             context.draw(sprite, in: CGRect(x: x + (cell - size) / 2, y: 64, width: size, height: size))
-            text(metadata.names["en"] ?? id, in: CGRect(x: x, y: 21, width: cell, height: 32),
+            text(character.names["en"] ?? id, in: CGRect(x: x, y: 21, width: cell, height: 32),
                  size: 24, color: color(0xDFE9EB))
             characterIndex += 1
         }

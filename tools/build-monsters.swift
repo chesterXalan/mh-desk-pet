@@ -50,7 +50,7 @@ for character in characters {
             }
         }
         let gifURL = destination.appendingPathComponent("\(state).gif")
-        // GIF 保留 1.6 秒預設時間，實際播放時間由 App 設定控制。
+        // Keep the default GIF loop at 1.6 seconds; app settings control the playback duration.
         try run(["ffmpeg", "-v", "error", "-y", "-framerate", "5/2", "-start_number", "0",
                  "-i", frames.appendingPathComponent("%d.png").path,
                  "-filter_complex", "split[a][b];[a]palettegen=reserve_transparent=1:stats_mode=full[p];[b][p]paletteuse=dither=none:alpha_threshold=128",

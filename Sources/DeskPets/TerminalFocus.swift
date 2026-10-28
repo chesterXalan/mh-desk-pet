@@ -1,7 +1,7 @@
 import AppKit
 import DeskPetsCore
 
-/// 喚起 session 所在的終端，並定位 tmux pane 或 cmux 分頁。
+/// Focus the session's terminal and select its tmux pane or cmux tab.
 @MainActor
 enum TerminalFocus {
     static func focus(_ session: AgentSession, completion: (@Sendable (Bool) -> Void)? = nil) {
@@ -55,7 +55,7 @@ enum TerminalFocus {
                         (ProcessTable.cwd(client.pid), TmuxControl.terminalTitle(for: location, client: client))
                     }.value
                     guard let directory else { throw GhosttyFocusError.notFound }
-                    // 換 pane 會改變標題，必須先記住外層 Ghostty 分頁的穩定 ID。
+                    // Switching panes changes the title, so capture the stable outer Ghostty tab ID first.
                     terminalID = try GhosttyAutomation.target(directory: directory, title: title).id
                 }
                 let switched = await Task.detached { TmuxControl.focus(location, client: client) }.value

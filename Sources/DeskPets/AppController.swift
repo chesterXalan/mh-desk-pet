@@ -226,7 +226,7 @@ final class AppController: ObservableObject {
         config.bindings.first { resolved[$0.id] == session.id }
     }
 
-    /// 選擇角色並記住目錄偏好；nil 只隱藏目前工作階段。
+    /// Choose a character and save the directory preference; nil hides only the current session.
     func setPet(_ character: String?, for session: AgentSession) {
         if let existing = binding(for: session) {
             if let character { setCharacter(character, for: existing.id) } else { hidePet(existing.id) }

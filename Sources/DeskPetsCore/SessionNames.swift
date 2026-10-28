@@ -126,8 +126,8 @@ public enum CmuxTree {
     }
 }
 
-/// 優先使用對話名稱，再依序採用 cmux 標題、AI 標題或 hook 標題。
-/// 標題讀取有快取，須從同一個序列佇列呼叫。
+/// Prefer conversation names, then cmux, AI, or hook titles in that order.
+/// Title reads are cached; call from a single serial queue.
 public final class SessionNamer: @unchecked Sendable {
     public var transcriptInterval: TimeInterval = 30
     public var cmuxInterval: TimeInterval = 20

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Codex 的標題索引只包含對話 ID、名稱和更新時間，不需要讀取對話內容。
+/// The Codex title index provides IDs, names, and timestamps without reading conversation content.
 enum CodexSessionIndex {
     static func titles(in data: Data) -> [String: String] {
         var titles: [String: String] = [:]

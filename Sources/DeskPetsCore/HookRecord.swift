@@ -110,7 +110,7 @@ public enum HookEvents {
 }
 
 public enum SessionMerger {
-    /// 優先對應程序與明確的對話 ID；沒有 ID 時，只接受目錄內唯一的 Codex 與新紀錄。
+    /// Prefer process and explicit conversation IDs; without an ID, require a unique Codex process and a fresh record in the directory.
     static func matchingRecord(for session: AgentSession, records: [HookRecord], sessions: [AgentSession]) -> HookRecord? {
         let candidates = records.filter { $0.provider == session.provider }
         if let direct = candidates
@@ -134,7 +134,7 @@ public enum SessionMerger {
         return latest.count == 1 ? latest.first : nil
     }
 
-    /// 將最新的對應事件套用至前景 CLI，保留供終端切換使用的原始 PID。
+    /// Apply the latest matching event to the foreground CLI, preserving its PID for terminal focus.
     public static func merge(_ sessions: [AgentSession], records: [HookRecord]) -> [AgentSession] {
         sessions.map { session in
             var session = session
