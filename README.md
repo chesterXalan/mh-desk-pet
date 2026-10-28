@@ -68,6 +68,6 @@ and backing up each file before changes. The app does not make network requests.
 
 ## Credits
 
-Based on [youngOman/desk-pets](https://github.com/youngOman/desk-pets), inspired by Evan's agent-pets.
-Code retains the upstream [MIT license](LICENSE).
+Based on [youngOman/desk-pets](https://github.com/youngOman/desk-pets), inspired by our colleague Evan's agent-pets.
+Code is licensed under [MIT](LICENSE), with the upstream copyright notice preserved.
 Monster Hunter characters belong to CAPCOM; the included artwork is AI-generated fan art.
