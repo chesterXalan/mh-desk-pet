@@ -233,19 +233,22 @@ private struct CharactersTab: View {
                 }
                 .width(90)
                 TableColumn(L.t("character.name"), value: \.name) { row in
-                    VStack(alignment: .leading) {
-                        Text(row.name)
-                        Text(row.character.builtIn ? L.t("character.builtIn") : row.character.directory.path)
-                            .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading) {
+                            Text(row.name).lineLimit(1).help(row.name)
+                            Text(row.character.builtIn ? L.t("character.builtIn") : row.character.directory.path)
+                                .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                        }
+                        Spacer(minLength: 0)
+                        if !row.character.builtIn {
+                            Button(L.t("action.delete")) { ui.pendingDelete = row.character }
+                        }
                     }
                 }
-                TableColumn("") { row in
-                    if !row.character.builtIn {
-                        Button(L.t("action.delete")) { ui.pendingDelete = row.character }
-                    }
-                }
-                .width(70)
+                .width(min: 180, ideal: 240, max: 280)
             }
+            .frame(maxWidth: 480)
+            .frame(maxWidth: .infinity)
             HStack {
                 Button(L.t("character.add")) { ui.adding = true }
                 Spacer()
