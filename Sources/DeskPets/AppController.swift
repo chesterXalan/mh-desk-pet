@@ -32,6 +32,7 @@ final class AppController: ObservableObject {
     private var scanCount = 0
     private let homeWindow = PetHomeWindowController()
     private var homeLayout: PetHomeLayout?
+    private var homePreview: PetHomeEdge?
     private var draggingPet: (id: UUID, origin: CGPoint)?
     private var movingHome = false
 
@@ -258,6 +259,10 @@ final class AppController: ObservableObject {
     private func petMoved(_ id: UUID, to origin: CGPoint) {
         if draggingPet?.id == id {
             homeWindow.highlight(homeLayout?.slot(at: NSEvent.mouseLocation))
+            let preview = homeLayout?.expansionEdge(at: NSEvent.mouseLocation, home: config.home,
+                                                   screens: NSScreen.screens.map(\.visibleFrame),
+                                                   moving: id, active: Set(homeResidents))
+            if preview != homePreview { renderHome() }
             return
         }
         config.setPosition(id, x: origin.x, y: origin.y)
@@ -275,17 +280,15 @@ final class AppController: ObservableObject {
     private func prepareHome(moveAll: Bool) {
         guard config.home.enabled else {
             homeLayout = nil
+            homePreview = nil
             return
         }
         var home = config.home
         let active = homeResidents
-        if moveAll { home.outside.subtract(active) }
         let largest = CGFloat(config.petSize) * (characters.map(\.displayScale).max() ?? 1)
-        let layout = PetHomeLayout(home: home, petSize: largest,
-                                   screens: NSScreen.screens.map(\.visibleFrame), constrain: !movingHome)
-        home.reconcile(active: active, capacity: layout.capacity, moveAll: moveAll)
-        home.x = layout.frame.minX
-        home.y = layout.frame.minY
+        let layout = home.arrange(active: active, petSize: largest, screens: NSScreen.screens.map(\.visibleFrame),
+                                  moveAll: moveAll, constrain: !movingHome,
+                                  allowResizing: draggingPet == nil && !movingHome)
         if home != config.home {
             config.home = home
             saveSoon()
@@ -299,12 +302,21 @@ final class AppController: ObservableObject {
             return
         }
         let occupied = Set(homeResidents.compactMap { config.home.slot(for: $0, capacity: layout.capacity) })
+        homePreview = draggingPet.flatMap { drag in
+            layout.expansionEdge(at: NSEvent.mouseLocation, home: config.home,
+                                 screens: NSScreen.screens.map(\.visibleFrame), moving: drag.id, active: Set(homeResidents))
+        }
         homeWindow.update(layout: layout, occupied: occupied, showsGrid: config.home.showsGrid || draggingPet != nil,
-                          visible: config.showPets)
+                          visible: config.showPets, preview: homePreview)
     }
 
     private func finishPetDrag(_ id: UUID, at point: CGPoint) {
         guard let drag = draggingPet, drag.id == id, let pet = pets[id] else { return }
+        let screens = NSScreen.screens.map(\.visibleFrame)
+        if let layout = homeLayout, let edge = layout.expansionEdge(at: point, home: config.home, screens: screens,
+                                                                  moving: id, active: Set(homeResidents)) {
+            homeLayout = config.home.expand(toward: edge, layout: layout, screens: screens) ?? layout
+        }
         if let layout = homeLayout, let room = layout.slot(at: point) {
             if let displaced = config.home.place(id, in: room, active: Set(homeResidents), capacity: layout.capacity) {
                 config.setPosition(displaced, x: drag.origin.x, y: drag.origin.y)
@@ -345,14 +357,20 @@ final class AppController: ObservableObject {
         save()
     }
 
+    func setHomeSmartResize(_ enabled: Bool) {
+        config.home.setSmartResize(enabled)
+        updatePets()
+        save()
+    }
+
     func setHomeColumns(_ columns: Int) {
-        config.home.columns = min(max(columns, 1), 8)
+        config.home.setBaseSize(columns: columns, rows: config.home.rows)
         updatePets()
         save()
     }
 
     func setHomeRows(_ rows: Int) {
-        config.home.rows = min(max(rows, 1), 8)
+        config.home.setBaseSize(columns: config.home.columns, rows: rows)
         updatePets()
         save()
     }

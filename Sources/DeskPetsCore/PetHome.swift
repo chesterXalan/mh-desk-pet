@@ -6,12 +6,17 @@ public struct PetHome: Codable, Equatable, Sendable {
     public var enabled = false
     public var showsGrid = true
     public var automaticallyAssign = true
+    public var smartResize = false
     public var columns = 4
     public var rows = 2
+    public var expansion = PetHomeExpansion()
     public var x: Double?
     public var y: Double?
     public var slots: [UUID?] = []
     public var outside: Set<UUID> = []
+
+    public var effectiveColumns: Int { min(max(columns, 1) + expansion.left + expansion.right, 8) }
+    public var effectiveRows: Int { min(max(rows, 1) + expansion.top + expansion.bottom, 8) }
 
     public init() {}
 
@@ -20,8 +25,10 @@ public struct PetHome: Codable, Equatable, Sendable {
         enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
         showsGrid = try container.decodeIfPresent(Bool.self, forKey: .showsGrid) ?? true
         automaticallyAssign = try container.decodeIfPresent(Bool.self, forKey: .automaticallyAssign) ?? true
+        smartResize = try container.decodeIfPresent(Bool.self, forKey: .smartResize) ?? false
         columns = try container.decodeIfPresent(Int.self, forKey: .columns) ?? 4
         rows = try container.decodeIfPresent(Int.self, forKey: .rows) ?? 2
+        expansion = try container.decodeIfPresent(PetHomeExpansion.self, forKey: .expansion) ?? PetHomeExpansion()
         x = try container.decodeIfPresent(Double.self, forKey: .x)
         y = try container.decodeIfPresent(Double.self, forKey: .y)
         slots = try container.decodeIfPresent([UUID?].self, forKey: .slots) ?? []
@@ -96,8 +103,8 @@ public struct PetHomeLayout: Equatable {
                 Self.distance(point, to: $0) < Self.distance(point, to: $1)
             }
         } ?? screens[0]
-        columns = min(max(home.columns, 1), 8)
-        rows = min(max(home.rows, 1), 8)
+        columns = home.effectiveColumns
+        rows = home.effectiveRows
         let availableWidth = (screen.width - 2 * Self.padding - CGFloat(columns - 1) * Self.gap) / CGFloat(columns)
         let availableHeight = (screen.height - Self.headerHeight - 2 * Self.padding
                                - CGFloat(rows - 1) * Self.gap) / CGFloat(rows)
@@ -109,6 +116,13 @@ public struct PetHomeLayout: Equatable {
         let proposed = CGRect(origin: origin, size: size)
         frame = CGRect(origin: constrain ? PetPlacement.visibleOrigin(for: proposed, screens: [screen]) : origin,
                        size: size)
+    }
+
+    init(frame: CGRect, columns: Int, rows: Int, cellSize: CGFloat) {
+        self.frame = frame
+        self.columns = columns
+        self.rows = rows
+        self.cellSize = cellSize
     }
 
     public func cell(_ index: Int) -> CGRect {

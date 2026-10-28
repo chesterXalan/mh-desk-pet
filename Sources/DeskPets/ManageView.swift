@@ -73,15 +73,18 @@ private struct HomeTab: View {
     @EnvironmentObject private var app: AppController
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             Toggle(L.t("home.enable"), isOn: Binding(
                 get: { app.config.home.enabled }, set: { app.setHomeEnabled($0) }))
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
                 Toggle(L.t("home.showGrid"), isOn: Binding(
                     get: { app.config.home.showsGrid }, set: { app.setHomeShowsGrid($0) }))
                 Toggle(L.t("home.autoAssign"), isOn: Binding(
                     get: { app.config.home.automaticallyAssign }, set: { app.setHomeAutoAssign($0) }))
+                Toggle(L.t("home.smartResize"), isOn: Binding(
+                    get: { app.config.home.smartResize }, set: { app.setHomeSmartResize($0) }))
                 HStack(spacing: 12) {
+                    if app.config.home.smartResize { Text(L.t("home.baseSize")).foregroundStyle(.secondary) }
                     Picker(L.t("home.columns"), selection: Binding(
                         get: { app.config.home.columns }, set: { app.setHomeColumns($0) })) {
                         ForEach(1...8, id: \.self) { Text(String($0)).tag($0) }
@@ -95,12 +98,23 @@ private struct HomeTab: View {
                         .foregroundStyle(.secondary)
                 }
                 .fixedSize()
-                Button(L.t("home.moveAll")) { app.moveAllPetsHome() }
+                HStack(spacing: 16) {
+                    Button(L.t("home.moveAll")) { app.moveAllPetsHome() }
+                    if app.config.home.smartResize {
+                        Text(L.format("home.currentSize", app.config.home.effectiveColumns, app.config.home.effectiveRows))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
             }
             .disabled(!app.config.home.enabled)
             Divider()
             Text(L.t("home.help"))
                 .fixedSize(horizontal: false, vertical: true)
+            if app.config.home.smartResize {
+                Text(L.t("home.smartHelp"))
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Text(L.t("home.screenHelp"))
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

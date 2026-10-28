@@ -39,17 +39,21 @@ final class PetHomeWindowController {
         grip.menuProvider = { [weak self] in self?.menuProvider?() ?? NSMenu() }
     }
 
-    func update(layout: PetHomeLayout, occupied: Set<Int>, showsGrid: Bool, visible: Bool) {
+    func update(layout: PetHomeLayout, occupied: Set<Int>, showsGrid: Bool, visible: Bool, preview: PetHomeEdge?) {
         self.layout = layout
-        background.setFrame(layout.frame, display: true)
+        let displayFrame = preview.map { layout.expandedFrame(toward: $0) } ?? layout.frame
+        background.setFrame(displayFrame, display: true)
         grid.cells = (0..<layout.capacity).map {
-            layout.cell($0).offsetBy(dx: -layout.frame.minX, dy: -layout.frame.minY)
+            layout.cell($0).offsetBy(dx: -displayFrame.minX, dy: -displayFrame.minY)
         }
+        grid.previewCells = preview.map { edge in
+            layout.expansionCells(toward: edge).map { $0.offsetBy(dx: -displayFrame.minX, dy: -displayFrame.minY) }
+        } ?? []
         grid.occupied = occupied
         grid.needsDisplay = true
-        let width = min(240, layout.frame.width - 12)
-        handle.setFrame(NSRect(x: layout.frame.midX - width / 2,
-                               y: layout.frame.maxY - PetHomeLayout.headerHeight + 2,
+        let width = min(240, displayFrame.width - 12)
+        handle.setFrame(NSRect(x: displayFrame.midX - width / 2,
+                               y: displayFrame.maxY - PetHomeLayout.headerHeight + 2,
                                width: width, height: 28), display: true)
         grip.title = L.format("home.handle", occupied.count, layout.capacity)
         grip.toolTip = L.t("home.dragHelp")
@@ -78,6 +82,7 @@ final class PetHomeWindowController {
 
 private final class PetHomeGridView: NSView {
     var cells: [CGRect] = []
+    var previewCells: [CGRect] = []
     var occupied: Set<Int> = []
     var highlighted: Int?
 
@@ -95,6 +100,22 @@ private final class PetHomeGridView: NSView {
             (String(index + 1) as NSString).draw(at: CGPoint(x: rect.minX + 9, y: rect.maxY - 21),
                 withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .medium),
                                  .foregroundColor: NSColor.labelColor.withAlphaComponent(occupied.contains(index) ? 0.25 : 0.5)])
+        }
+        for rect in previewCells {
+            let path = NSBezierPath(roundedRect: rect.insetBy(dx: 1, dy: 1), xRadius: 12, yRadius: 12)
+            NSColor.controlAccentColor.withAlphaComponent(0.12).setFill()
+            path.fill()
+            NSColor.controlAccentColor.withAlphaComponent(0.9).setStroke()
+            path.lineWidth = 2
+            path.setLineDash([6, 4], count: 2, phase: 0)
+            path.stroke()
+            let label = "+" as NSString
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: NSFont.systemFont(ofSize: 24, weight: .light), .foregroundColor: NSColor.controlAccentColor,
+            ]
+            let size = label.size(withAttributes: attributes)
+            label.draw(at: CGPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2),
+                       withAttributes: attributes)
         }
     }
 }
