@@ -12,7 +12,7 @@ Each pet follows a CLI session and animates when it is working, waiting for inpu
 Selected companions, grouped by state and ordered by EM ID within each group, at a 1.2-second loop.
 Every monster has all three animations.
 Browse the [full monster roster](docs/monsters.md) for previews and names in English, Traditional Chinese, and Japanese.
-The roster and in-app character lists follow numeric EM ID order.
+The roster and in-app character lists default to numeric EM ID order.
 
 - English, Traditional Chinese, and Japanese UI and monster names
 - Adjustable animation speed and size (64–256 px), saved automatically

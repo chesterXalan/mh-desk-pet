@@ -207,22 +207,39 @@ private struct CharactersTab: View {
     @EnvironmentObject private var app: AppController
     @StateObject private var ui = CharactersUI()
 
+    private var rows: [CharacterTableRow] {
+        let rows = app.characters.map { CharacterTableRow(character: $0, name: $0.displayName(in: L.language)) }
+            .sorted(using: ui.sortOrder)
+        guard ui.sortOrder.first?.keyPath == \CharacterTableRow.emID else { return rows }
+        return rows.filter { $0.character.emID != nil } + rows.filter { $0.character.emID == nil }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            List(app.characters) { character in
-                HStack(spacing: 12) {
-                    GIFThumbnail(url: character.gif(for: .idle))
+            Table(rows, sortOrder: $ui.sortOrder) {
+                TableColumn("") { row in
+                    GIFThumbnail(url: row.character.gif(for: .idle))
+                        .padding(.vertical, 2)
+                }
+                .width(48)
+                TableColumn(L.t("character.emID"), value: \.emID) { row in
+                    Text(row.character.emID.map { String(format: "em%03d", $0) } ?? "—")
+                        .monospacedDigit().foregroundStyle(.secondary)
+                }
+                .width(90)
+                TableColumn(L.t("character.name"), value: \.name) { row in
                     VStack(alignment: .leading) {
-                        Text(character.displayName(in: L.language))
-                        Text(character.builtIn ? L.t("character.builtIn") : character.directory.path)
+                        Text(row.name)
+                        Text(row.character.builtIn ? L.t("character.builtIn") : row.character.directory.path)
                             .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                     }
-                    Spacer()
-                    if !character.builtIn {
-                        Button(L.t("action.delete")) { ui.pendingDelete = character }
+                }
+                TableColumn("") { row in
+                    if !row.character.builtIn {
+                        Button(L.t("action.delete")) { ui.pendingDelete = row.character }
                     }
                 }
-                .padding(.vertical, 2)
+                .width(70)
             }
             HStack {
                 Button(L.t("character.add")) { ui.adding = true }
@@ -398,8 +415,17 @@ private struct HooksTab: View {
     }
 }
 
+private struct CharacterTableRow: Identifiable {
+    let character: CharacterInfo
+    let name: String
+
+    var id: String { character.id }
+    var emID: Int { character.emID ?? Int.max }
+}
+
 // SwiftUI's @State is a macro the Command Line Tools cannot expand, so view state lives in small objects.
 private final class CharactersUI: ObservableObject {
+    @Published var sortOrder = [KeyPathComparator(\CharacterTableRow.emID)]
     @Published var adding = false
     @Published var pendingDelete: CharacterInfo?
     @Published var error: String?
