@@ -1,22 +1,26 @@
 import AppKit
 import DeskPetsCore
 
-/// 背景穿透滑鼠，小把手獨立接收拖曳，隱藏格線時也能搬動宿舍。
+/// 宿舍以完整框線取得視窗焦點，小把手在隱藏格線時也能選取與搬家。
 @MainActor
-final class PetHomeWindowController {
+final class PetHomeWindowController: NSObject, NSWindowDelegate {
     var onDrag: ((CGPoint, Bool) -> Void)?
     var menuProvider: (() -> NSMenu)?
 
-    private let background = PetPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
-                                      backing: .buffered, defer: true)
+    private let background = PetHomeWindow(contentRect: .zero, styleMask: [.titled, .resizable, .fullSizeContentView],
+                                           backing: .buffered, defer: true)
     private let handle = PetPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
                                   backing: .buffered, defer: true)
     private let grid = PetHomeGridView()
     private let grip = PetHomeHandleView()
     private var layout: PetHomeLayout?
     private var dragOrigin: CGPoint?
+    private var renderedFrame = CGRect.zero
+    private var updating = false
+    private var externalMove: DispatchWorkItem?
 
-    init() {
+    override init() {
+        super.init()
         for panel in [background, handle] {
             panel.isOpaque = false
             panel.backgroundColor = .clear
@@ -25,8 +29,17 @@ final class PetHomeWindowController {
             panel.hidesOnDeactivate = false
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         }
+        background.delegate = self
+        background.isMovable = true
+        background.titleVisibility = .hidden
+        background.titlebarAppearsTransparent = true
+        background.standardWindowButton(.closeButton)?.isHidden = true
+        background.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        background.standardWindowButton(.zoomButton)?.isHidden = true
+        background.setAccessibilityElement(true)
+        background.setAccessibilitySubrole(.standardWindow)
+        background.setAccessibilityIdentifier("pet-home-window")
         background.level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue - 1)
-        background.ignoresMouseEvents = true
         background.contentView = grid
         handle.level = .floating
         handle.contentView = grip
@@ -36,13 +49,27 @@ final class PetHomeWindowController {
             self.dragOrigin = ended ? nil : origin
             self.onDrag?(CGPoint(x: origin.x + delta.x, y: origin.y + delta.y), ended)
         }
+        grid.onSelect = { [weak self] in self?.selectHome() }
+        grid.menuProvider = { [weak self] in self?.menuProvider?() ?? NSMenu() }
+        grip.onSelect = { [weak self] in self?.selectHome() }
         grip.menuProvider = { [weak self] in self?.menuProvider?() ?? NSMenu() }
     }
 
     func update(layout: PetHomeLayout, occupied: Set<Int>, showsGrid: Bool, visible: Bool, preview: PetHomeEdge?) {
+        if !visible {
+            externalMove?.cancel()
+            externalMove = nil
+        }
+        guard externalMove == nil else { return }
+        updating = true
+        defer { updating = false }
         self.layout = layout
         let displayFrame = preview.map { layout.expandedFrame(toward: $0) } ?? layout.frame
+        background.title = L.t("home.title")
         background.setFrame(displayFrame, display: true)
+        renderedFrame = background.frame
+        background.ignoresMouseEvents = !showsGrid
+        grid.showsGrid = showsGrid
         grid.cells = (0..<layout.capacity).map {
             layout.cell($0).offsetBy(dx: -displayFrame.minX, dy: -displayFrame.minY)
         }
@@ -56,11 +83,12 @@ final class PetHomeWindowController {
                                y: displayFrame.maxY - PetHomeLayout.headerHeight + 2,
                                width: width, height: 28), display: true)
         grip.title = L.format("home.handle", occupied.count, layout.capacity)
+        grip.selected = background.isKeyWindow && NSApp.isActive
         grip.toolTip = L.t("home.dragHelp")
         grip.setAccessibilityLabel(grip.title)
         grip.setAccessibilityHelp(L.t("home.dragHelp"))
         if visible {
-            if showsGrid { background.orderFrontRegardless() } else { background.orderOut(nil) }
+            background.orderFrontRegardless()
             handle.orderFrontRegardless()
         } else {
             background.orderOut(nil)
@@ -75,9 +103,43 @@ final class PetHomeWindowController {
     }
 
     func hide() {
+        externalMove?.cancel()
+        externalMove = nil
         background.orderOut(nil)
         handle.orderOut(nil)
     }
+
+    private func selectHome() {
+        NSApp.activate()
+        background.makeKeyAndOrderFront(nil)
+        background.orderFrontRegardless()
+    }
+
+    func windowDidBecomeKey(_ notification: Notification) { grip.selected = true }
+    func windowDidResignKey(_ notification: Notification) { grip.selected = false }
+    func windowDidMove(_ notification: Notification) { scheduleExternalMove() }
+    func windowDidResize(_ notification: Notification) { scheduleExternalMove() }
+
+    private func scheduleExternalMove() {
+        guard !updating, background.isVisible, layout != nil, background.frame != renderedFrame else { return }
+        externalMove?.cancel()
+        // 視窗管理工具可能分開設定座標與尺寸，合併完成後再帶整組移動。
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.externalMove = nil
+            guard self.background.isVisible, let layout = self.layout else { return }
+            let delta = CGPoint(x: self.background.frame.minX - self.renderedFrame.minX,
+                                y: self.background.frame.minY - self.renderedFrame.minY)
+            self.onDrag?(CGPoint(x: layout.frame.minX + delta.x, y: layout.frame.minY + delta.y), true)
+        }
+        externalMove = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: work)
+    }
+}
+
+private final class PetHomeWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
 }
 
 private final class PetHomeGridView: NSView {
@@ -85,8 +147,24 @@ private final class PetHomeGridView: NSView {
     var previewCells: [CGRect] = []
     var occupied: Set<Int> = []
     var highlighted: Int?
+    var showsGrid = true
+    var onSelect: (() -> Void)?
+    var menuProvider: (() -> NSMenu)?
+
+    override var mouseDownCanMoveWindow: Bool { false }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func mouseDown(with event: NSEvent) { onSelect?() }
+
+    override func rightMouseDown(with event: NSEvent) {
+        onSelect?()
+        guard let menu = menuProvider?() else { return }
+        NSMenu.popUpContextMenu(menu, with: event, for: self)
+    }
 
     override func draw(_ dirtyRect: NSRect) {
+        NSColor.clear.setFill()
+        dirtyRect.fill(using: .copy)
+        guard showsGrid else { return }
         for (index, rect) in cells.enumerated() {
             let path = NSBezierPath(roundedRect: rect, xRadius: 12, yRadius: 12)
             let selected = highlighted == index
@@ -122,6 +200,8 @@ private final class PetHomeGridView: NSView {
 
 private final class PetHomeHandleView: NSView {
     var title = "" { didSet { needsDisplay = true } }
+    var selected = false { didSet { needsDisplay = true } }
+    var onSelect: (() -> Void)?
     var onDrag: ((CGPoint, Bool) -> Void)?
     var menuProvider: (() -> NSMenu)?
     private var start: CGPoint?
@@ -143,7 +223,8 @@ private final class PetHomeHandleView: NSView {
         let path = NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 10, yRadius: 10)
         NSColor.windowBackgroundColor.withAlphaComponent(0.86).setFill()
         path.fill()
-        NSColor.labelColor.withAlphaComponent(0.2).setStroke()
+        (selected ? NSColor.controlAccentColor : NSColor.labelColor.withAlphaComponent(0.2)).setStroke()
+        path.lineWidth = selected ? 2 : 1
         path.stroke()
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
@@ -154,6 +235,7 @@ private final class PetHomeHandleView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        onSelect?()
         start = NSEvent.mouseLocation
         dragging = false
     }
@@ -175,6 +257,7 @@ private final class PetHomeHandleView: NSView {
     }
 
     override func rightMouseDown(with event: NSEvent) {
+        onSelect?()
         guard let menu = menuProvider?() else { return }
         NSMenu.popUpContextMenu(menu, with: event, for: self)
     }

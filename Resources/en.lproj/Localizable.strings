@@ -11,10 +11,11 @@
 "home.rows" = "Rows";
 "home.capacity" = "%d rooms";
 "home.moveAll" = "Fill vacant rooms";
+"home.moveToDisplay" = "Move to Display";
 "home.disable" = "Disable Habitat";
 "home.handle" = "Habitat · %d / %d";
-"home.dragHelp" = "Drag to move all rooms; right-click for options";
-"home.help" = "Drag a pet into an empty room to move in, onto another pet to swap, or outside to move out. Drag the handle to move the whole habitat. The handle stays visible when rooms are hidden; rooms appear temporarily while dragging a pet.";
+"home.dragHelp" = "Click to select the habitat; drag to move all rooms; right-click for options";
+"home.help" = "Drag a pet into an empty room to move in, onto another pet to swap, or outside to move out. Drag the handle to move the whole habitat. Right-click the handle or a room background and choose Move to Display to move the group directly. Clicking either selects the habitat for window-management tools. The handle remains when rooms are hidden; rooms reappear while dragging a pet.";
 "home.screenHelp" = "Extra pets stay outside when expansion is unavailable. The habitat scales down to fit smaller screens. Room assignments are saved; disabling the habitat restores free-placement positions.";
 "pets.show" = "Show pets";
 "pets.size" = "Pet size";

@@ -380,6 +380,16 @@ final class AppController: ObservableObject {
         save()
     }
 
+    func moveHomeToDisplay(_ screen: NSScreen) {
+        guard let layout = homeLayout else { return }
+        var home = config.home
+        home.x = screen.visibleFrame.midX - layout.frame.width / 2
+        home.y = screen.visibleFrame.midY - layout.frame.height / 2
+        let largest = CGFloat(config.petSize) * (characters.map(\.displayScale).max() ?? 1)
+        let destination = PetHomeLayout(home: home, petSize: largest, screens: [screen.visibleFrame])
+        moveHome(to: destination.frame.origin, ended: true)
+    }
+
     private func homeMenu() -> NSMenu {
         let menu = NSMenu()
         let grid = ClosureMenuItem(title: L.t("home.showGrid")) { [weak self] in
@@ -388,6 +398,15 @@ final class AppController: ObservableObject {
         }
         grid.state = config.home.showsGrid ? .on : .off
         menu.addItem(grid)
+        let displays = NSMenuItem(title: L.t("home.moveToDisplay"), action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+        for (index, screen) in NSScreen.screens.enumerated() {
+            submenu.addItem(ClosureMenuItem(title: "\(index + 1) · \(screen.localizedName)") { [weak self] in
+                self?.moveHomeToDisplay(screen)
+            })
+        }
+        displays.submenu = submenu
+        menu.addItem(displays)
         menu.addItem(ClosureMenuItem(title: L.t("home.moveAll")) { [weak self] in self?.moveAllPetsHome() })
         menu.addItem(ClosureMenuItem(title: L.t("settings.open")) {
             (NSApp.delegate as? AppDelegate)?.openManager()

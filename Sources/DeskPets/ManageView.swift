@@ -97,7 +97,15 @@ private struct HomeTab: View {
                         .foregroundStyle(.secondary)
                 }
                 .fixedSize()
-                Button(L.t("home.moveAll")) { app.moveAllPetsHome() }
+                HStack(spacing: 16) {
+                    Button(L.t("home.moveAll")) { app.moveAllPetsHome() }
+                    Menu(L.t("home.moveToDisplay")) {
+                        ForEach(Array(NSScreen.screens.enumerated()), id: \.offset) { index, screen in
+                            Button("\(index + 1) · \(screen.localizedName)") { app.moveHomeToDisplay(screen) }
+                        }
+                    }
+                    .fixedSize()
+                }
             }
             .disabled(!app.config.home.enabled)
             Divider()

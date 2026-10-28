@@ -164,6 +164,7 @@ final class PetWindowController: NSObject, NSWindowDelegate {
         guard wantsVisible else { return }
         wantsVisible = false
         bubble.hide()
+        petView.stopDragAnimation()
         petView.sprite.removeAllAnimations()
         panel.orderOut(nil)
     }
@@ -216,6 +217,7 @@ final class PetWindowController: NSObject, NSWindowDelegate {
 
 final class PetView: NSView {
     let sprite = CALayer()
+    private let dragLayer = CALayer()
     private let dot = CALayer()
     var onDoubleClick: (() -> Void)?
     var onHover: ((Bool) -> Void)?
@@ -233,11 +235,13 @@ final class PetView: NSView {
         sprite.contentsGravity = .resizeAspect
         sprite.magnificationFilter = .nearest
         sprite.actions = ["contents": NSNull(), "bounds": NSNull(), "position": NSNull()]
+        dragLayer.actions = ["bounds": NSNull(), "position": NSNull()]
         dot.cornerRadius = 4
         dot.borderWidth = 1
         dot.borderColor = NSColor.white.withAlphaComponent(0.9).cgColor
         dot.actions = ["backgroundColor": NSNull(), "position": NSNull(), "bounds": NSNull()]
-        layer?.addSublayer(sprite)
+        layer?.addSublayer(dragLayer)
+        dragLayer.addSublayer(sprite)
         layer?.addSublayer(dot)
     }
 
@@ -247,7 +251,8 @@ final class PetView: NSView {
 
     override func layout() {
         super.layout()
-        sprite.frame = bounds
+        dragLayer.frame = bounds
+        sprite.frame = dragLayer.bounds
         dot.frame = NSRect(x: bounds.maxX - 10, y: 2, width: 8, height: 8)
     }
 
@@ -276,6 +281,7 @@ final class PetView: NSView {
     override func mouseExited(with event: NSEvent) { onHover?(false) }
 
     override func mouseDown(with event: NSEvent) {
+        stopDragAnimation()
         dragStart = nil
         dragging = false
         if event.clickCount == 2 {
@@ -293,6 +299,7 @@ final class PetView: NSView {
         guard dragging || hypot(delta.x, delta.y) >= 3 else { return }
         if !dragging {
             dragging = true
+            startDragAnimation()
             onDragBegan?(start.origin)
         }
         window?.setFrameOrigin(CGPoint(x: start.origin.x + delta.x, y: start.origin.y + delta.y))
@@ -300,9 +307,25 @@ final class PetView: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
+        stopDragAnimation()
         if dragging { onDragEnded?(NSEvent.mouseLocation) }
         dragStart = nil
         dragging = false
+    }
+
+    private func startDragAnimation() {
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
+        let wiggle = CAKeyframeAnimation(keyPath: "transform.rotation.z")
+        wiggle.values = [0, 0.04, 0, -0.04, 0]
+        wiggle.keyTimes = [0, 0.25, 0.5, 0.75, 1]
+        wiggle.duration = 0.28
+        wiggle.calculationMode = .cubic
+        wiggle.repeatCount = .infinity
+        dragLayer.add(wiggle, forKey: "drag-wiggle")
+    }
+
+    func stopDragAnimation() {
+        dragLayer.removeAnimation(forKey: "drag-wiggle")
     }
 
     override func rightMouseDown(with event: NSEvent) {

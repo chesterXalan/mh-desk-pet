@@ -47,12 +47,19 @@ Size is the base display size; per-character scale adjustments keep monsters vis
 Ended sessions disappear automatically; directory preferences remain for the next launch.
 Each directory remembers every pet's position. New sessions reuse vacant positions without moving active pets;
 pets outside the available screens move back to the nearest visible area.
+Pets gently wobble while being dragged, while their normal animations keep playing. The wobble respects
+the macOS Reduce Motion setting.
 Selecting **None** hides a pet for that session without forgetting the directory's character choice.
 
 Enable **Habitat** in the manager to group pets into rooms. New pets fill vacant rooms automatically;
 turn off automatic placement to move them in yourself. Drag a pet into an empty room, onto another pet
 to swap positions, or outside to move out. A pet moved out stays outside until you move it back or select
 **Fill vacant rooms**. Drag the header handle to move the whole habitat.
+Click a room background or the handle to select the habitat; the handle's border highlights the selection.
+Right-click either and choose **Move to Display** to center the whole group on the selected screen; the
+same menu is available in the Habitat settings. This direct move does not use Raycast or inspect other apps.
+The habitat also exposes a standard window for window-management tools; moves are propagated to its residents.
+Raycast compatibility is still being verified, so use the built-in display menu if its commands have no effect.
 Room backgrounds can be hidden; the handle stays visible, and rooms reappear while dragging a pet.
 Room assignments and the habitat position survive restarts. Turning the habitat off restores free-placement
 positions. Choose a **columns × rows** layout (for example, 4 × 2 gives eight rooms).
