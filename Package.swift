@@ -13,6 +13,7 @@ let package = Package(
         .executableTarget(name: "DeskPets", dependencies: ["DeskPetsCore"]),
         .executableTarget(name: "DeskPetsHook", dependencies: ["DeskPetsCore"]),
         .testTarget(name: "DeskPetsCoreTests", dependencies: ["DeskPetsCore"]),
+        .testTarget(name: "DeskPetsTests", dependencies: ["DeskPets", "DeskPetsCore"]),
     ],
     swiftLanguageModes: [.v5]
 )

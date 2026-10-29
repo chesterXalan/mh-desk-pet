@@ -148,9 +148,11 @@ final class PetWindowController: NSObject, NSWindowDelegate {
     }
 
     func setOrigin(_ origin: CGPoint) {
-        guard panel.frame.origin != origin else { return }
+        let previousOrigin = panel.frame.origin
+        guard previousOrigin != origin else { return }
         panel.setFrameOrigin(origin)
-        bubble.hide()
+        // AppKit can round fractional positions back to the existing window origin.
+        if panel.frame.origin != previousOrigin { bubble.hide() }
     }
 
     func show() {
@@ -243,6 +245,9 @@ final class PetView: NSView {
         layer?.addSublayer(dragLayer)
         dragLayer.addSublayer(sprite)
         layer?.addSublayer(dot)
+        // The visible rect follows layout changes without resetting hover tracking.
+        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                      owner: self, userInfo: nil))
     }
 
     required init?(coder: NSCoder) {
@@ -264,13 +269,6 @@ final class PetView: NSView {
         case .unknown, .exited: dot.backgroundColor = nil
         }
         dot.borderWidth = dot.backgroundColor == nil ? 0 : 1
-    }
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        trackingAreas.forEach(removeTrackingArea)
-        addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
-                                       owner: self, userInfo: nil))
     }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
@@ -352,6 +350,7 @@ final class HoverBubble {
         panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.ignoresMouseEvents = true
+        panel.animationBehavior = .none
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         let background = NSVisualEffectView()

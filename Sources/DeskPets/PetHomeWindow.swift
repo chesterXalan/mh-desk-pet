@@ -84,12 +84,13 @@ final class PetHomeWindowController: NSObject, NSWindowDelegate {
                                width: width, height: 28), display: true)
         grip.title = L.format("home.handle", occupied.count, layout.capacity)
         grip.selected = background.isKeyWindow && NSApp.isActive
-        grip.toolTip = L.t("home.dragHelp")
+        let help = L.t("home.dragHelp")
+        if grip.toolTip != help { grip.toolTip = help }
         grip.setAccessibilityLabel(grip.title)
-        grip.setAccessibilityHelp(L.t("home.dragHelp"))
+        grip.setAccessibilityHelp(help)
         if visible {
-            background.orderFrontRegardless()
-            handle.orderFrontRegardless()
+            if !background.isVisible { background.orderFrontRegardless() }
+            if !handle.isVisible { handle.orderFrontRegardless() }
         } else {
             background.orderOut(nil)
             handle.orderOut(nil)
